@@ -38,7 +38,7 @@
     <link rel="icon" type="image/png" href="myt-mobiles-logo.png">
     
     <!-- Styles with cache busting -->
-    <link rel="stylesheet" href="style.css?v=17.0_neon_material">
+    <link rel="stylesheet" href="style.css?v=19.0_popup_redesign">
 </head>
 <body>
     <!-- Background Elements -->
@@ -103,6 +103,28 @@
                     <button class="wheel-center-button" id="spinButton">SPIN</button>
                 </div>
             </div>
+
+            <!-- How It Works -->
+            <div class="how-it-works">
+                <h3 class="how-it-works-title">How It Works</h3>
+                <div class="how-it-works-steps">
+                    <div class="step-item">
+                        <span class="step-number">01</span>
+                        <span class="step-icon material-symbol">ads_click</span>
+                        <p class="step-text">Click on Spin the Wheel</p>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-number">02</span>
+                        <span class="step-icon material-symbol">casino</span>
+                        <p class="step-text">Spin &amp; wait for the result</p>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-number">03</span>
+                        <span class="step-icon material-symbol">redeem</span>
+                        <p class="step-text">Win exciting prizes!</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -119,7 +141,6 @@
         <div class="modal" id="prizeModal">
             <div class="prize-emoji" id="prizeEmoji">🎁</div>
             <h2 class="prize-name" id="prizeName">Prize Name</h2>
-            <div class="prize-category" id="prizeCategory">Category</div>
             <div class="prize-display" id="prizeDisplay">
                 <!-- Prize details will be shown here -->
             </div>
@@ -432,7 +453,7 @@
             }
             
             // Force reload if version mismatch
-            const currentVersion = '12.0_neon_material_redesign';
+            const currentVersion = '14.0_popup_redesign';
             const storedVersion = localStorage.getItem('wheel_version');
             
             if (storedVersion && storedVersion !== currentVersion) {

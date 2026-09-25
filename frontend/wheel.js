@@ -2236,7 +2236,6 @@ class PickerWheelUI {
 
         const prizeEmoji = document.getElementById('prizeEmoji');
         const prizeName = document.getElementById('prizeName');
-        const prizeCategory = document.getElementById('prizeCategory');
         const prizeDisplay = document.getElementById('prizeDisplay');
 
         console.log('🔍 DEBUG: Setting DOM elements');
@@ -2262,11 +2261,6 @@ class PickerWheelUI {
             }
         }
         if (prizeName) prizeName.textContent = prize.name;
-        
-        if (prizeCategory) {
-            prizeCategory.textContent = prize.category_display || prize.category.replace('_', ' ').toUpperCase();
-            prizeCategory.className = `prize-category ${prize.category}`;
-        }
 
         if (prizeDisplay) {
             prizeDisplay.innerHTML = '';

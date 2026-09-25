@@ -43,8 +43,14 @@
     --elevation-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
 
-/* Material design mode: minimal, flat, light surfaces, no glow */
+/* Material design mode: minimal, flat, light surfaces, no glow.
+   Palette modeled on vodafone.com: signature red, bold sans-serif
+   headlines, generous white space, white cards with a soft shadow. */
 :root[data-design-mode="material"] {
+    --primary: #E60000;
+    --primary-light: #FF3333;
+    --primary-dark: #B30000;
+
     --text-primary: #1A1A2E;
     --text-secondary: #5F6368;
     --text-muted: #80838A;
@@ -85,7 +91,7 @@ body {
 
 /* Material mode: flat, light, no glow blooms */
 [data-design-mode="material"] body {
-    background: #F5F5F7;
+    background: #FFFFFF;
     background-attachment: fixed;
 }
 
@@ -207,6 +213,11 @@ body {
     border: none;
     box-shadow: var(--elevation-shadow);
     border-radius: 16px;
+    padding: 28px 32px;
+}
+
+[data-design-mode="material"] .main-content {
+    gap: 48px;
 }
 
 /* Logo positioned top-left */
@@ -904,21 +915,16 @@ body {
     transform: scale(1);
 }
 
-.modal.rare-prize {
-    border-color: #ffd700;
-    box-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
-    animation: modalGlow 2s ease-in-out infinite alternate;
-}
-
-@keyframes modalGlow {
-    0% { box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5); }
-    100% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.5); }
-}
-
-.prize-emoji {
+/* Scoped with #prizeModal - see .prize-name comment above for why */
+#prizeModal .prize-emoji {
     font-size: 4rem;
     margin-bottom: 1rem;
     animation: bounce 2s ease-in-out infinite;
+    filter: drop-shadow(0 0 12px rgba(255, 45, 120, 0.6));
+}
+
+[data-design-mode="material"] #prizeModal .prize-emoji {
+    filter: none;
 }
 
 @keyframes bounce {
@@ -1079,37 +1085,19 @@ body {
     }
 }
 
-.prize-name {
+/* Scoped with #prizeModal so this reliably wins over the .prize-name /
+   .prize-emoji rules used for the (unrelated) daily-prizes-log table rows
+   further down this file, regardless of source order. */
+#prizeModal .prize-name {
     font-size: 1.8rem;
     font-weight: 800;
     margin-bottom: 0.5rem;
-    color: #4ecdc4;
-    text-shadow: 0 2px 10px rgba(78, 205, 196, 0.5);
+    color: var(--text-primary);
+    text-shadow: 0 0 10px rgba(255, 45, 120, 0.6), 0 0 20px rgba(255, 45, 120, 0.4);
 }
 
-.prize-category {
-    display: inline-block;
-    padding: 0.5rem 1rem;
-    border-radius: 25px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-    text-transform: uppercase;
-}
-
-.prize-category.ultra_rare {
-    background: linear-gradient(45deg, #ffd700, #ffa500);
-    color: #000;
-}
-
-.prize-category.rare {
-    background: linear-gradient(45deg, #ff6b6b, #ff4757);
-    color: #fff;
-}
-
-.prize-category.common {
-    background: linear-gradient(45deg, #4ecdc4, #00d2d3);
-    color: #fff;
+[data-design-mode="material"] #prizeModal .prize-name {
+    text-shadow: none;
 }
 
 .combo-display {
@@ -1149,7 +1137,7 @@ body {
 }
 
 .close-button {
-    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    background: linear-gradient(135deg, #FF2D78, #7A0040);
     color: white;
     border: none;
     padding: 0.8rem 2rem;
@@ -1159,13 +1147,13 @@ body {
     cursor: pointer;
     margin-top: 1.5rem;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+    box-shadow: 0 4px 15px rgba(255, 45, 120, 0.4);
 }
 
 .close-button:hover {
-    background: linear-gradient(135deg, #ff5252, #e53e3e);
+    background: linear-gradient(135deg, #FF6FA8, #B8005D);
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+    box-shadow: 0 6px 20px rgba(255, 45, 120, 0.5);
 }
 
 [data-design-mode="material"] .close-button {
@@ -1252,6 +1240,93 @@ body {
     text-align: center;
     color: #4ecdc4;
     font-weight: 600;
+}
+
+/* How It Works */
+.how-it-works {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1.75rem 1.5rem;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.how-it-works-title {
+    text-align: center;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+}
+
+.how-it-works-steps {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.step-item {
+    flex: 1 1 180px;
+    max-width: 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.5rem;
+}
+
+.step-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #FF2D78, #7A0040);
+    color: #FFFFFF;
+    font-weight: 800;
+    font-size: 0.9rem;
+    box-shadow: 0 0 15px rgba(255, 45, 120, 0.5);
+}
+
+.step-icon {
+    font-size: 30px;
+    color: var(--text-primary);
+}
+
+.step-text {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    line-height: 1.35;
+}
+
+[data-design-mode="material"] .how-it-works {
+    background: var(--surface) !important;
+    border: none;
+    box-shadow: var(--elevation-shadow);
+    backdrop-filter: none;
+    padding: 2.5rem 2rem;
+}
+
+[data-design-mode="material"] .how-it-works-title {
+    letter-spacing: 1px;
+}
+
+[data-design-mode="material"] .step-number {
+    background: var(--primary) !important;
+    box-shadow: none;
+}
+
+[data-design-mode="material"] .step-icon {
+    color: var(--primary);
 }
 
 /* Daily Prizes Log Styles */
@@ -1526,12 +1601,32 @@ body {
         margin-top: 1.5rem;
     }
     
+    /* How It Works Mobile Styles */
+    .how-it-works {
+        /* Keep width:100% (inherited) - it's a flex item inside .main-content
+           (align-items:center), so width:auto would shrink-to-fit instead of
+           filling the row, which threw off centering/caused overflow */
+        max-width: calc(100% - 1rem);
+        margin: 0 0.5rem;
+        padding: 1.25rem 1rem;
+    }
+
+    .how-it-works-steps {
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5rem;
+    }
+
+    .step-item {
+        max-width: 100%;
+    }
+
     /* Daily Prizes Log Mobile Styles */
     .daily-prizes-log-container {
         margin: 1rem 0.5rem;
         padding: 1rem;
     }
-    
+
     .daily-prizes-header {
         flex-direction: column;
         align-items: stretch;
