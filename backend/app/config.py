@@ -34,9 +34,6 @@ class Config:
     # Event settings
     DEFAULT_EVENT_ID = 1
     
-    # Theme settings
-    FORCE_DEFAULT_THEME = os.environ.get('FORCE_DEFAULT_THEME', 'false').lower() == 'true'
-    
     # Socket.IO settings
     SOCKETIO_MESSAGE_QUEUE = os.environ.get('SOCKETIO_MESSAGE_QUEUE', None)
     

@@ -1,14 +1,14 @@
 // Service Worker for PickerWheel Contest App
-const VERSION = '16.0_bw_material';
+const VERSION = '17.0_two_themes';
 const CACHE_NAME = 'pickerwheel-contest-v' + VERSION;
 // Note: each file below carries its own cache-busting query string (set in
 // index.html) rather than a single shared VERSION, so they're listed as-is.
 const STATIC_ASSETS = [
     '/',
     '/index.html',
-    '/style.css?v=21.0_bw_material',
-    '/theme-manager.js?v=3.0_cinematic',
-    '/wheel.js?v=17.0_bw_material',
+    '/style.css?v=22.0_two_themes',
+    '/theme-manager.js?v=4.0_event_only',
+    '/wheel.js?v=18.0_two_themes',
     'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap'
 ];
 

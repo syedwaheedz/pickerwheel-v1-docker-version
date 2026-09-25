@@ -1001,7 +1001,7 @@ class PickerWheelUI {
         if (window.themeManager && window.themeManager.activeTheme?.wheel?.colors) {
             colors = window.themeManager.getWheelColors();
         } else {
-            // Default neon magenta palette (mirrors theme-manager.js's defaultTheme)
+            // Built-in Neon palette (an active event theme can override it)
             colors = ['#1B0510', '#E50065', '#2A0716', '#FF4FA3', '#22040F', '#FF2B86'];
         }
 

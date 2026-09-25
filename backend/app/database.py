@@ -114,27 +114,3 @@ class DatabaseManager:
                     results.append(None)
             return results
 
-
-# App Settings helpers
-def get_setting(key, default=None):
-    """Get an app setting from the database"""
-    sql = "SELECT value FROM app_settings WHERE key = :key"
-    results = execute_sql(sql, {'key': key})
-    if results and len(results) > 0:
-        return results[0]['value']
-    return default
-
-
-def set_setting(key, value):
-    """Set an app setting in the database"""
-    import json
-    sql = """
-        INSERT INTO app_settings (key, value, updated_at)
-        VALUES (:key, :value, CURRENT_TIMESTAMP)
-        ON CONFLICT (key) DO UPDATE 
-        SET value = :value, updated_at = CURRENT_TIMESTAMP
-        RETURNING key, value
-    """
-    value_json = json.dumps(value) if isinstance(value, dict) else value
-    results = execute_sql(sql, {'key': key, 'value': value_json})
-    return results[0] if results else None

@@ -44,7 +44,7 @@
     <link rel="icon" type="image/png" href="myt-mobiles-logo.png">
     
     <!-- Styles with cache busting -->
-    <link rel="stylesheet" href="style.css?v=21.0_bw_material">
+    <link rel="stylesheet" href="style.css?v=22.0_two_themes">
 </head>
 <body>
     <!-- Background Elements -->
@@ -72,7 +72,7 @@
                 </div>
                 <div class="title-section">
                     <h1 class="main-title"><span class="title-lead">SPIN &amp; </span><span class="title-accent">WIN</span></h1>
-                    <p class="subtitle">✨ Win Exciting Prizes! ✨</p>
+                    <p class="subtitle"><span class="sparkle">✨ </span>Win Exciting Prizes!<span class="sparkle"> ✨</span></p>
                     <p class="offer-period">Spin the wheel and win amazing prizes!</p>
                 </div>
                 <div class="control-buttons">
@@ -420,10 +420,10 @@
     </script>
 
     <!-- Theme Manager - Load before wheel.js -->
-    <script src="theme-manager.js?v=3.0_cinematic"></script>
+    <script src="theme-manager.js?v=4.0_event_only"></script>
 
     <!-- Script with cache busting -->
-    <script src="wheel.js?v=17.0_bw_material"></script>
+    <script src="wheel.js?v=18.0_two_themes"></script>
     
     <!-- Socket.IO for real-time updates -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -467,7 +467,7 @@
             }
             
             // Force reload if version mismatch
-            const currentVersion = '16.0_bw_material';
+            const currentVersion = '17.0_two_themes';
             const storedVersion = localStorage.getItem('wheel_version');
             
             if (storedVersion && storedVersion !== currentVersion) {

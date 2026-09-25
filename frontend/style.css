@@ -5,9 +5,9 @@
  * Vodafone-inspired "Material" design via data-design-mode="material" on
  * <html> (see the design-mode script in index.html).
  *
- * theme-manager.js paints the page background and header tint inline from
- * the active theme (admin-configurable, per special event), so those two
- * are only fallbacks here. Everything else - depth, glow, glass - is CSS.
+ * These are the only two designs. While a special event with its own theme
+ * is running, theme-manager.js recolours Neon's background, header tint and
+ * wheel inline from the event's colours; Material always stays black & white.
  */
 
 :root {
@@ -44,15 +44,6 @@
     --surface-border: rgba(0, 0, 0, 0.08);
     --elevation-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
 
-    /* Legacy variables still set by theme-manager.js */
-    --theme-bg-primary: #E50065;
-    --theme-bg-secondary: #09070A;
-    --theme-bg-tertiary: #650A2C;
-    --header-bg-color: #16050D;
-    --header-gradient-end: #650A2C;
-    --header-text-color: #FFFFFF;
-    --wheel-border-color: #FF2B86;
-    --wheel-text-color: #FFFFFF;
 }
 
 /* Material: strictly black & white (greys only) - flat, light surfaces,
@@ -1316,6 +1307,10 @@ body.spinning {
 
 [data-design-mode="material"] .subtitle {
     color: var(--text-secondary);
+}
+
+[data-design-mode="material"] .sparkle {
+    display: none;
 }
 
 [data-design-mode="material"] .offer-period {
