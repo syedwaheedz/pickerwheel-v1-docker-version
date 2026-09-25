@@ -55,18 +55,18 @@
     --wheel-text-color: #FFFFFF;
 }
 
-/* Material: flat, light surfaces, no glow. Palette modeled on vodafone.com -
-   signature red, bold headlines, generous white space. */
+/* Material: strictly black & white (greys only) - flat, light surfaces,
+   no glow, bold headlines, generous white space. */
 :root[data-design-mode="material"] {
-    --primary: #E60000;
-    --primary-light: #FF3333;
-    --primary-hot: #E60000;
-    --primary-dark: #B30000;
+    --primary: #111111;
+    --primary-light: #111111;
+    --primary-hot: #111111;
+    --primary-dark: #333333;
 
-    --text-primary: #1A1A2E;
-    --text-secondary: #5F6368;
-    --text-muted: #80838A;
-    --accent-color: #E60000;
+    --text-primary: #111111;
+    --text-secondary: #555555;
+    --text-muted: #8A8A8A;
+    --accent-color: #111111;
 
     --glass-bg: #FFFFFF;
     --glass-border: rgba(0, 0, 0, 0.06);
@@ -1299,10 +1299,6 @@ body.spinning {
     color: var(--text-primary);
 }
 
-[data-design-mode="material"] .logo-img {
-    filter: none;
-}
-
 [data-design-mode="material"] .main-title {
     filter: none;
     animation: none;
@@ -1431,7 +1427,7 @@ body.spinning {
 
 [data-design-mode="material"] .log-prize-icon {
     color: var(--primary);
-    background: rgba(230, 0, 0, 0.08);
+    background: rgba(0, 0, 0, 0.06);
     border-color: transparent;
 }
 
@@ -1451,7 +1447,7 @@ body.spinning {
 
 [data-design-mode="material"] #prizeModal .prize-emoji {
     background: var(--primary);
-    box-shadow: 0 4px 14px rgba(230, 0, 0, 0.3);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 
 [data-design-mode="material"] #prizeModal .prize-name {
@@ -1459,9 +1455,66 @@ body.spinning {
 }
 
 [data-design-mode="material"] .error-message {
-    color: var(--primary-dark);
-    background: rgba(230, 0, 0, 0.06);
-    border-color: rgba(230, 0, 0, 0.3);
+    color: var(--text-primary);
+    background: #F2F2F2;
+    border-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Black & white wheel. The slice/label colors are SVG attributes set from the
+   theme palette in wheel.js; CSS overrides them here so the palette toggle
+   switches instantly without re-rendering the wheel. Slices are drawn first
+   (paths), then one label <g> per slice in the same order, so :nth-of-type
+   parity lines each label up with its slice. */
+[data-design-mode="material"] .wheel-inner path {
+    fill: #FFFFFF;
+    stroke: #CFCFCF;
+}
+
+[data-design-mode="material"] .wheel-inner path:nth-of-type(odd) {
+    fill: #111111;
+}
+
+/* Odd prize count: the last slice would be black next to black slice 0 */
+[data-design-mode="material"] .wheel-inner path:nth-of-type(odd):last-of-type {
+    fill: #5C5C5C;
+}
+
+[data-design-mode="material"] .wheel-inner path:hover {
+    stroke: #8A8A8A;
+}
+
+[data-design-mode="material"] .wheel-inner g text {
+    fill: #111111;
+    stroke: none;
+}
+
+[data-design-mode="material"] .wheel-inner g:nth-of-type(odd) text {
+    fill: #FFFFFF;
+}
+
+[data-design-mode="material"] .wheel-inner circle:nth-of-type(1) {
+    stroke: rgba(0, 0, 0, 0.18);
+}
+
+[data-design-mode="material"] .wheel-inner circle:nth-of-type(2) {
+    fill: #FFFFFF;
+    stroke: #111111;
+}
+
+[data-design-mode="material"] .spark {
+    background: #111111;
+    box-shadow: none;
+}
+
+/* Logo shown in greyscale to keep the page strictly black & white */
+[data-design-mode="material"] .logo-img {
+    filter: grayscale(1);
+}
+
+[data-design-mode="material"] .spin-cta:hover,
+[data-design-mode="material"] .close-button:hover,
+[data-design-mode="material"] .wheel-center-button:hover:not(:disabled) {
+    background: var(--primary-dark);
 }
 
 /* ========================================================================

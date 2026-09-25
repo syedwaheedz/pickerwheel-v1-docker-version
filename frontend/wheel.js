@@ -2091,9 +2091,12 @@ class PickerWheelUI {
         
         // Determine confetti intensity based on category
         const confettiCount = category === 'rare' || category === 'ultra_rare' ? 50 : 30;
-        const colors = category === 'rare' || category === 'ultra_rare' 
-            ? ['#FFD36B', '#F5B83D', '#FF2B86', '#FF4FA3', '#E50065', '#FFFFFF', '#FFC2DD', '#FF8CC0']
-            : ['#FFD36B', '#FF2B86', '#FF4FA3', '#E50065', '#FFFFFF'];
+        const isMaterial = document.documentElement.dataset.designMode === 'material';
+        const colors = isMaterial
+            ? ['#FFFFFF', '#111111', '#5C5C5C', '#A6A6A6', '#E0E0E0']
+            : category === 'rare' || category === 'ultra_rare'
+                ? ['#FFD36B', '#F5B83D', '#FF2B86', '#FF4FA3', '#E50065', '#FFFFFF', '#FFC2DD', '#FF8CC0']
+                : ['#FFD36B', '#FF2B86', '#FF4FA3', '#E50065', '#FFFFFF'];
         
         // Create confetti pieces
         for (let i = 0; i < confettiCount; i++) {
