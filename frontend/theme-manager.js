@@ -6,22 +6,22 @@
 class ThemeManager {
     constructor() {
         this.apiBaseUrl = '/api';
-        // Default theme: Magenta Pink (#E20074) with Soft White (#FFF5F8)
+        // Default theme: Neon Magenta - dark maroon/black base with a hot-pink glow
         this.defaultTheme = {
             name: 'default',
             background: {
                 type: 'gradient',
-                colors: ['#E20074', '#FFF5F8', '#FF4D9F'],
+                colors: ['#FF2D78', '#0D0007', '#7A0040'],
                 style: 'radial'
             },
             wheel: {
-                colors: ['#E20074', '#FF4D9F', '#B8005D', '#FF80B5', '#9E0052', '#FF66A3'],
-                borderColor: '#B8005D',
+                colors: ['#1A0010', '#FF2D78', '#2D0018', '#FF6FA8', '#3D0025', '#FF9EC4'],
+                borderColor: '#FF2D78',
                 textColor: '#FFFFFF'
             },
             header: {
-                backgroundColor: '#E20074',
-                gradientEnd: '#B8005D',
+                backgroundColor: '#12000A',
+                gradientEnd: '#FF2D78',
                 textColor: '#FFFFFF',
                 title: 'SPIN & WIN',
                 subtitle: 'Win Exciting Prizes!'
@@ -123,6 +123,16 @@ class ThemeManager {
      * Apply background styling
      */
     applyBackground() {
+        // Material design mode owns the background entirely via CSS (flat,
+        // no per-event glow) - clear any inline style a previous Neon-mode
+        // apply left behind instead of fighting it.
+        if (document.documentElement.dataset.designMode === 'material') {
+            document.body.style.background = '';
+            document.body.style.backgroundColor = '';
+            document.body.style.backgroundAttachment = '';
+            return;
+        }
+
         const theme = this.activeTheme;
         const body = document.body;
 
@@ -133,15 +143,18 @@ class ThemeManager {
                 const colors = bg.colors;
                 
                 if (bg.style === 'radial') {
-                    // Watercolor-inspired radial gradient
+                    // Glow-blooms radiating from the corners over the theme's own base
+                    // color (colors[1]) - works for both a light base (old pastel themes)
+                    // and a dark base (neon themes), instead of a hardcoded white wash.
+                    const base = colors[1] || colors[2] || colors[0];
                     body.style.background = `
-                        radial-gradient(ellipse at 0% 0%, ${this.hexToRgba(colors[0], 0.4)} 0%, transparent 50%),
-                        radial-gradient(ellipse at 100% 0%, ${this.hexToRgba(colors[0], 0.3)} 0%, transparent 40%),
-                        radial-gradient(ellipse at 0% 100%, ${this.hexToRgba(colors[2] || colors[0], 0.4)} 0%, transparent 50%),
-                        radial-gradient(ellipse at 100% 100%, ${this.hexToRgba(colors[2] || colors[0], 0.3)} 0%, transparent 40%),
-                        radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 248, 240, 0.9) 100%)
+                        radial-gradient(ellipse at 20% 15%, ${this.hexToRgba(colors[0], 0.55)} 0%, transparent 45%),
+                        radial-gradient(ellipse at 85% 10%, ${this.hexToRgba(colors[2] || colors[0], 0.4)} 0%, transparent 40%),
+                        radial-gradient(ellipse at 10% 90%, ${this.hexToRgba(colors[2] || colors[0], 0.4)} 0%, transparent 45%),
+                        radial-gradient(ellipse at 90% 90%, ${this.hexToRgba(colors[0], 0.35)} 0%, transparent 40%),
+                        radial-gradient(ellipse at 50% 45%, ${this.hexToRgba(base, 0.85)} 0%, ${base} 100%)
                     `;
-                    body.style.backgroundColor = '#FFF8F0';
+                    body.style.backgroundColor = base;
                 } else if (bg.style === 'linear') {
                     // Linear gradient (like tricolor)
                     body.style.background = `linear-gradient(180deg, ${colors.join(', ')})`;
@@ -166,28 +179,32 @@ class ThemeManager {
      */
     applyHeader() {
         const theme = this.activeTheme;
-        
+        const isMaterial = document.documentElement.dataset.designMode === 'material';
+
         if (theme.header) {
             const header = theme.header;
-            
-            // Update header navigation background
+
+            // Update header navigation background (Material mode keeps its own
+            // flat card background from CSS - clear any leftover inline gradient)
             const topNav = document.querySelector('.top-nav');
             if (topNav) {
-                topNav.style.background = `linear-gradient(135deg, ${header.backgroundColor || '#FF9933'}, ${header.gradientEnd || '#E67300'})`;
+                topNav.style.background = isMaterial ? '' :
+                    `linear-gradient(135deg, ${header.backgroundColor || '#FF9933'}, ${header.gradientEnd || '#E67300'})`;
             }
 
-            // Update title text
+            // Update title text (Material mode skips the decorative emoji for
+            // a cleaner, minimal look, and lets CSS own the text color)
             const mainTitle = document.querySelector('.main-title');
             if (mainTitle && header.title) {
-                mainTitle.textContent = `🎉 ${header.title} 🎊`;
-                mainTitle.style.color = header.textColor || '#FFFFFF';
+                mainTitle.textContent = isMaterial ? header.title : `🎉 ${header.title} 🎊`;
+                mainTitle.style.color = isMaterial ? '' : (header.textColor || '#FFFFFF');
             }
 
             // Update subtitle
             const subtitle = document.querySelector('.subtitle');
             if (subtitle && header.subtitle) {
-                subtitle.textContent = `✨ ${header.subtitle} ✨`;
-                subtitle.style.color = header.textColor || '#FFFFFF';
+                subtitle.textContent = isMaterial ? header.subtitle : `✨ ${header.subtitle} ✨`;
+                subtitle.style.color = isMaterial ? '' : (header.textColor || '#FFFFFF');
             }
         }
     }

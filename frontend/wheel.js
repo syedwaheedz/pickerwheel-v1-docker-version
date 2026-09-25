@@ -726,25 +726,28 @@ class PickerWheelUI {
         const emojiX = centerX + emojiRadius * Math.cos(angleRad);
         const emojiY = centerY + emojiRadius * Math.sin(angleRad);
         
-        // Create emoji display (combo emojis for combo items, regular emojis for others)
+        // Create icon display (combo emojis for legacy combo items, a flat
+        // Material Symbols icon for everything else - see getPrizeIcon()
         const comboEmoji = this.getComboEmojiDisplay(segment.name);
         const sizes = this.getMobileSizes();
-        
+
         const displayElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         displayElement.setAttribute('x', emojiX);
         displayElement.setAttribute('y', emojiY);
         displayElement.setAttribute('text-anchor', 'middle');
         displayElement.setAttribute('dominant-baseline', 'middle');
-        displayElement.setAttribute('font-size', sizes.fontSize.emoji);
         displayElement.setAttribute('fill', '#ffffff');
-        displayElement.setAttribute('stroke', '#000000');
-        displayElement.setAttribute('stroke-width', '0.3');
-        
+
         if (comboEmoji) {
+            displayElement.setAttribute('font-size', sizes.fontSize.emoji);
+            displayElement.setAttribute('stroke', '#000000');
+            displayElement.setAttribute('stroke-width', '0.3');
             displayElement.textContent = comboEmoji;
             console.log(`🎨 Using combo emoji for ${segment.name}: ${comboEmoji}`);
         } else {
-            displayElement.textContent = segment.emoji || '🎁';
+            displayElement.setAttribute('font-family', "'Material Symbols Outlined'");
+            displayElement.setAttribute('font-size', sizes.fontSize.emoji);
+            displayElement.textContent = this.getPrizeIcon(segment.name);
         }
         
         // Format text for two lines if needed
@@ -1296,35 +1299,59 @@ class PickerWheelUI {
     getPrizeColor(category, index) {
         // Get colors from ThemeManager if available, otherwise use defaults
         let colors;
-        
+
         if (window.themeManager && window.themeManager.activeTheme?.wheel?.colors) {
             colors = window.themeManager.getWheelColors();
         } else {
-            // Default tricolor palette
+            // Default neon magenta palette (mirrors theme-manager.js's defaultTheme)
             colors = [
-                '#FF9933',  // Saffron
-                '#138808',  // Green
-                '#FFB366',  // Light Saffron
-                '#1DB954',  // Light Green
-                '#E67300',  // Dark Saffron
-                '#2E8B57',  // Sea Green
-                '#FF7F00',  // Deep Orange
-                '#228B22',  // Forest Green
-                '#FFA500',  // Orange
-                '#32CD32',  // Lime Green
+                '#1A0010', '#FF2D78', '#2D0018', '#FF6FA8', '#3D0025', '#FF9EC4',
             ];
         }
-        
+
         return colors[index % colors.length];
     }
 
     getTextColor(category, segmentColor) {
-        // Light saffron shades need dark text, others use white
-        const lightColors = ['#FFB366', '#FFA500'];
+        // Light wheel shades need dark text, others use white
+        const lightColors = ['#FF9EC4', '#FF6FA8'];
         if (segmentColor && lightColors.includes(segmentColor)) {
-            return '#1a1a2e';  // Dark text for light saffron backgrounds
+            return '#1a1a2e';  // Dark text for light backgrounds
         }
         return '#FFFFFF';  // White text for all other backgrounds
+    }
+
+    // Material Symbols (Outlined) icon name per prize, used instead of an emoji
+    // in each wedge. Matched by exact prize name (case-insensitive); falls back
+    // to a generic "redeem" gift icon for anything unmapped.
+    static PRIZE_ICON_MAP = {
+        'air cooler': 'mode_fan',
+        '32-inch tv': 'tv',
+        'washing machine': 'local_laundry_service',
+        'home theatre': 'theaters',
+        'luggage bag': 'luggage',
+        'govo buds': 'earbuds',
+        'smart audio sunglasses': 'wb_sunny',
+        'boult q5 bluetooth speaker': 'speaker',
+        'g5 game + sup gaming handheld': 'sports_esports',
+        'soundbar': 'graphic_eq',
+        'screen guard + back cover': 'smartphone',
+        'wired earphones': 'headphones',
+        'neckband': 'headset',
+        'power bank': 'battery_charging_full',
+        'smart watch': 'watch',
+        'dinner set': 'restaurant',
+        'casserole set': 'dinner_dining',
+        'meetha set': 'cake',
+        'laptop stand': 'laptop',
+        'massage gun': 'spa',
+        'induction stove': 'local_fire_department',
+        '2-in-1 juicer': 'blender',
+    };
+
+    getPrizeIcon(prizeName) {
+        const key = (prizeName || '').trim().toLowerCase();
+        return PickerWheelUI.PRIZE_ICON_MAP[key] || 'redeem';
     }
 
     async spin() {

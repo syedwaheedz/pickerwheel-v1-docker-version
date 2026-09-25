@@ -4,24 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>myT MOBILES - Spin & Win!</title>
-    
+
+    <!-- Design mode (Neon/Material) applied before CSS loads, to avoid a
+         flash of the wrong look on page load -->
+    <script>
+        (function () {
+            try {
+                var urlMode = new URLSearchParams(location.search).get('design');
+                if (urlMode === 'material' || urlMode === 'neon') {
+                    localStorage.setItem('designMode', urlMode);
+                }
+                var mode = urlMode || localStorage.getItem('designMode') || 'neon';
+                document.documentElement.dataset.designMode = mode;
+            } catch (e) {
+                document.documentElement.dataset.designMode = 'neon';
+            }
+        })();
+    </script>
+
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Poppins:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Poppins:wght@300;400;600;700;800;900&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&display=swap" rel="stylesheet">
+
     <!-- Meta tags -->
     <meta name="description" content="myT MOBILES Spin & Win - Win amazing prizes with every spin!">
     <meta name="keywords" content="myT MOBILES, spin wheel, prizes, contest, mobile accessories">
     <meta name="author" content="myT MOBILES">
     
     <!-- PWA Meta -->
-    <meta name="theme-color" content="#FF9933">
+    <meta name="theme-color" content="#12000A">
     <link rel="manifest" href="manifest.json">
     
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="myt-mobiles-logo.png">
     
     <!-- Styles with cache busting -->
-    <link rel="stylesheet" href="style.css?v=16.0_magenta">
+    <link rel="stylesheet" href="style.css?v=17.0_neon_material">
 </head>
 <body>
     <!-- Background Elements -->
@@ -56,6 +73,9 @@
                     </button>
                     <button class="control-btn" id="effectsToggle" title="Toggle Effects">
                         <span class="control-icon">✨</span>
+                    </button>
+                    <button class="control-btn" id="designModeToggle" title="Switch design (Neon / Material)" onclick="toggleDesignMode()">
+                        <span class="control-icon material-symbol" id="designModeIcon">palette</span>
                     </button>
                     <button class="control-btn" id="adminBtn" onclick="openAdminPanel()" title="Admin Panel" style="display: none;">
                         <span class="control-icon">⚙️</span>
@@ -351,11 +371,24 @@
         console.log('%cUse Ctrl+Shift+Alt+A to authenticate', 'color: #888; font-size: 12px;');
     </script>
     
+    <!-- Design Mode Toggle (Neon / Material) -->
+    <script>
+        function toggleDesignMode() {
+            var current = document.documentElement.dataset.designMode || 'neon';
+            var next = current === 'material' ? 'neon' : 'material';
+            document.documentElement.dataset.designMode = next;
+            try { localStorage.setItem('designMode', next); } catch (e) { /* ignore */ }
+            if (window.themeManager && typeof window.themeManager.applyTheme === 'function') {
+                window.themeManager.applyTheme();
+            }
+        }
+    </script>
+
     <!-- Theme Manager - Load before wheel.js -->
-    <script src="theme-manager.js?v=1.0"></script>
-    
+    <script src="theme-manager.js?v=2.0_neon"></script>
+
     <!-- Script with cache busting -->
-    <script src="wheel.js?v=14.0_themed"></script>
+    <script src="wheel.js?v=15.0_neon_icons"></script>
     
     <!-- Socket.IO for real-time updates -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -399,7 +432,7 @@
             }
             
             // Force reload if version mismatch
-            const currentVersion = '11.4_20250922';
+            const currentVersion = '12.0_neon_material_redesign';
             const storedVersion = localStorage.getItem('wheel_version');
             
             if (storedVersion && storedVersion !== currentVersion) {
