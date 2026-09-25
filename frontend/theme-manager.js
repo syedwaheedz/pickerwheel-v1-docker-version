@@ -6,22 +6,23 @@
 class ThemeManager {
     constructor() {
         this.apiBaseUrl = '/api';
-        // Default theme: Neon Magenta - dark maroon/black base with a hot-pink glow
+        // Default theme: Neon Magenta - near-black base, deep burgundy bloom,
+        // hot-pink accents
         this.defaultTheme = {
             name: 'default',
             background: {
                 type: 'gradient',
-                colors: ['#FF2D78', '#0D0007', '#7A0040'],
+                colors: ['#E50065', '#09070A', '#650A2C'],
                 style: 'radial'
             },
             wheel: {
-                colors: ['#1A0010', '#FF2D78', '#2D0018', '#FF6FA8', '#3D0025', '#FF9EC4'],
-                borderColor: '#FF2D78',
+                colors: ['#1B0510', '#E50065', '#2A0716', '#FF4FA3', '#22040F', '#FF2B86'],
+                borderColor: '#FF2B86',
                 textColor: '#FFFFFF'
             },
             header: {
-                backgroundColor: '#12000A',
-                gradientEnd: '#FF2D78',
+                backgroundColor: '#16050D',
+                gradientEnd: '#650A2C',
                 textColor: '#FFFFFF',
                 title: 'SPIN & WIN',
                 subtitle: 'Win Exciting Prizes!'
@@ -143,16 +144,19 @@ class ThemeManager {
                 const colors = bg.colors;
                 
                 if (bg.style === 'radial') {
-                    // Glow-blooms radiating from the corners over the theme's own base
-                    // color (colors[1]) - works for both a light base (old pastel themes)
-                    // and a dark base (neon themes), instead of a hardcoded white wash.
+                    // Cinematic stage: the theme's base color (colors[1]) with a
+                    // deep ambient bloom (colors[2]) and faint accent (colors[0])
+                    // glows up top. The strong glow behind the wheel itself is a
+                    // CSS layer on .wheel-container so it follows the wheel.
+                    // Works for a light base (older pastel themes) too.
                     const base = colors[1] || colors[2] || colors[0];
+                    const deep = colors[2] || colors[0];
                     body.style.background = `
-                        radial-gradient(ellipse at 20% 15%, ${this.hexToRgba(colors[0], 0.55)} 0%, transparent 45%),
-                        radial-gradient(ellipse at 85% 10%, ${this.hexToRgba(colors[2] || colors[0], 0.4)} 0%, transparent 40%),
-                        radial-gradient(ellipse at 10% 90%, ${this.hexToRgba(colors[2] || colors[0], 0.4)} 0%, transparent 45%),
-                        radial-gradient(ellipse at 90% 90%, ${this.hexToRgba(colors[0], 0.35)} 0%, transparent 40%),
-                        radial-gradient(ellipse at 50% 45%, ${this.hexToRgba(base, 0.85)} 0%, ${base} 100%)
+                        radial-gradient(ellipse 70% 55% at 50% 42%, ${this.hexToRgba(deep, 0.55)} 0%, transparent 70%),
+                        radial-gradient(ellipse 45% 35% at 12% 8%, ${this.hexToRgba(colors[0], 0.14)} 0%, transparent 70%),
+                        radial-gradient(ellipse 45% 35% at 88% 8%, ${this.hexToRgba(colors[0], 0.12)} 0%, transparent 70%),
+                        radial-gradient(ellipse 60% 30% at 50% 100%, ${this.hexToRgba(deep, 0.35)} 0%, transparent 70%),
+                        ${base}
                     `;
                     body.style.backgroundColor = base;
                 } else if (bg.style === 'linear') {
@@ -184,27 +188,35 @@ class ThemeManager {
         if (theme.header) {
             const header = theme.header;
 
-            // Update header navigation background (Material mode keeps its own
-            // flat card background from CSS - clear any leftover inline gradient)
+            // Header panel tint. Translucent so it reads as glass over the
+            // stage; Material mode keeps its own flat card background from
+            // CSS, so clear any leftover inline gradient there.
             const topNav = document.querySelector('.top-nav');
             if (topNav) {
                 topNav.style.background = isMaterial ? '' :
-                    `linear-gradient(135deg, ${header.backgroundColor || '#FF9933'}, ${header.gradientEnd || '#E67300'})`;
+                    `linear-gradient(135deg, ${this.hexToRgba(header.backgroundColor, 0.72)}, ${this.hexToRgba(header.gradientEnd, 0.5)})`;
             }
 
-            // Update title text (Material mode skips the decorative emoji for
-            // a cleaner, minimal look, and lets CSS own the text color)
+            // Title: last word gets the accent treatment ("SPIN & " + "WIN").
+            // Built from text nodes, never innerHTML - the title comes from
+            // admin-editable theme data.
             const mainTitle = document.querySelector('.main-title');
             if (mainTitle && header.title) {
-                mainTitle.textContent = isMaterial ? header.title : `🎉 ${header.title} 🎊`;
-                mainTitle.style.color = isMaterial ? '' : (header.textColor || '#FFFFFF');
+                const title = header.title.trim();
+                const split = title.lastIndexOf(' ');
+                const lead = document.createElement('span');
+                lead.className = 'title-lead';
+                lead.textContent = split > 0 ? title.slice(0, split + 1) : '';
+                const accent = document.createElement('span');
+                accent.className = 'title-accent';
+                accent.textContent = split > 0 ? title.slice(split + 1) : title;
+                mainTitle.replaceChildren(lead, accent);
             }
 
-            // Update subtitle
+            // Subtitle (sparkles only in Neon; CSS owns the colors)
             const subtitle = document.querySelector('.subtitle');
             if (subtitle && header.subtitle) {
                 subtitle.textContent = isMaterial ? header.subtitle : `✨ ${header.subtitle} ✨`;
-                subtitle.style.color = isMaterial ? '' : (header.textColor || '#FFFFFF');
             }
         }
     }

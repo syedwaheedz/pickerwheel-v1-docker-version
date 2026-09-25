@@ -655,9 +655,33 @@ class PickerWheelUI {
         svg.style.width = '100%';
         svg.style.height = '100%';
 
-        this.segments.forEach((segment, index) => {
+        // Slices first, then labels on top so separators never cross text
+        this.segments.forEach(segment => {
             this.createSVGSegment(svg, segment, centerX, centerY, radius);
         });
+        this.segments.forEach(segment => {
+            this.addSegmentText(svg, segment, centerX, centerY, radius);
+        });
+
+        // Concentric rings: a fine highlight on the rim and a dark hub ring
+        // with a pink edge that frames the centre SPIN button
+        const rim = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        rim.setAttribute('cx', centerX);
+        rim.setAttribute('cy', centerY);
+        rim.setAttribute('r', radius - 1);
+        rim.setAttribute('fill', 'none');
+        rim.setAttribute('stroke', 'rgba(255, 214, 232, 0.6)');
+        rim.setAttribute('stroke-width', radius * 0.012);
+        svg.appendChild(rim);
+
+        const hub = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        hub.setAttribute('cx', centerX);
+        hub.setAttribute('cy', centerY);
+        hub.setAttribute('r', radius * 0.3);
+        hub.setAttribute('fill', '#14030C');
+        hub.setAttribute('stroke', '#FF2B86');
+        hub.setAttribute('stroke-width', radius * 0.016);
+        svg.appendChild(hub);
 
         // Clear and add SVG to wheel
         this.wheelInner.innerHTML = '';
@@ -688,448 +712,122 @@ class PickerWheelUI {
         
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('d', pathData);
+        const separatorColor = 'rgba(255, 214, 232, 0.55)';
+        const separatorWidth = radius * 0.008;
         path.setAttribute('fill', segment.color);
-        path.setAttribute('stroke', '#ffffff');
-        path.setAttribute('stroke-width', '3');
+        path.setAttribute('stroke', separatorColor);
+        path.setAttribute('stroke-width', separatorWidth);
+        path.setAttribute('stroke-linejoin', 'round');
         path.setAttribute('data-prize-id', segment.id);
         path.setAttribute('data-segment-index', segment.index);
         path.style.cursor = 'pointer';
         
         // Add hover effect
         path.addEventListener('mouseenter', () => {
-            path.setAttribute('stroke-width', '4');
-            path.setAttribute('stroke', '#ffff00');
+            path.setAttribute('stroke-width', separatorWidth * 2.5);
+            path.setAttribute('stroke', '#FFFFFF');
         });
         
         path.addEventListener('mouseleave', () => {
-            path.setAttribute('stroke-width', '3');
-            path.setAttribute('stroke', '#ffffff');
+            path.setAttribute('stroke-width', separatorWidth);
+            path.setAttribute('stroke', separatorColor);
         });
         
         svg.appendChild(path);
-        
-        // Add text label
-        this.addSegmentText(svg, segment, centerX, centerY, radius);
     }
 
     addSegmentText(svg, segment, centerX, centerY, radius) {
+        const SVG_NS = 'http://www.w3.org/2000/svg';
         const midAngle = (segment.startAngle + segment.endAngle) / 2;
-        
-        // Create a group for this segment's text
-        const textGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        
-        // Calculate the angle in radians for positioning
-        const angleRad = (midAngle - 90) * (Math.PI / 180);
-        
-        // Position emoji much further from center to avoid spin button
-        const emojiRadius = radius * 0.45; // Moved much further out
-        const emojiX = centerX + emojiRadius * Math.cos(angleRad);
-        const emojiY = centerY + emojiRadius * Math.sin(angleRad);
-        
-        // Create icon display (combo emojis for legacy combo items, a flat
-        // Material Symbols icon for everything else - see getPrizeIcon()
+        const sliceRad = (segment.angle * Math.PI) / 180;
+
+        // Rotate a group so the segment's centre line runs along +x. Labels on
+        // the left half are flipped 180° so they read upright at rest.
+        const flip = midAngle > 180;
+        const dir = flip ? -1 : 1;
+        const groupRotation = midAngle - 90 + (flip ? 180 : 0);
+        const group = document.createElementNS(SVG_NS, 'g');
+        group.setAttribute('transform', `rotate(${groupRotation} ${centerX} ${centerY})`);
+        group.setAttribute('pointer-events', 'none');
+
+        // Icon near the rim, where the slice is widest, counter-rotated so it
+        // stands upright at rest (combo emojis kept for legacy combo prizes)
+        const iconX = centerX + dir * radius * 0.86;
+        const iconSize = Math.min(radius * 0.09, radius * 0.86 * sliceRad * 0.6);
         const comboEmoji = this.getComboEmojiDisplay(segment.name);
-        const sizes = this.getMobileSizes();
-
-        const displayElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        displayElement.setAttribute('x', emojiX);
-        displayElement.setAttribute('y', emojiY);
-        displayElement.setAttribute('text-anchor', 'middle');
-        displayElement.setAttribute('dominant-baseline', 'middle');
-        displayElement.setAttribute('fill', '#ffffff');
-
+        const icon = document.createElementNS(SVG_NS, 'text');
+        icon.setAttribute('x', iconX);
+        icon.setAttribute('y', centerY);
+        icon.setAttribute('text-anchor', 'middle');
+        icon.setAttribute('dominant-baseline', 'central');
+        icon.setAttribute('font-size', iconSize);
+        icon.setAttribute('fill', segment.textColor);
+        icon.setAttribute('class', 'wheel-icon');
+        icon.setAttribute('transform', `rotate(${-groupRotation} ${iconX} ${centerY})`);
         if (comboEmoji) {
-            displayElement.setAttribute('font-size', sizes.fontSize.emoji);
-            displayElement.setAttribute('stroke', '#000000');
-            displayElement.setAttribute('stroke-width', '0.3');
-            displayElement.textContent = comboEmoji;
-            console.log(`🎨 Using combo emoji for ${segment.name}: ${comboEmoji}`);
+            icon.textContent = comboEmoji;
         } else {
-            displayElement.setAttribute('font-family', "'Material Symbols Outlined'");
-            displayElement.setAttribute('font-size', sizes.fontSize.emoji);
-            displayElement.textContent = this.getPrizeIcon(segment.name);
+            icon.setAttribute('font-family', "'Material Symbols Outlined'");
+            icon.textContent = this.getPrizeIcon(segment.name);
         }
-        
-        // Format text for two lines if needed
-        const formattedText = this.formatPrizeNameForTwoLines(segment.name);
-        const textLines = formattedText.split('\n');
-        
-        // Create text with proper vertical separation
-        if (textLines.length === 1) {
-            // Single line - position after emoji
-            this.createTextLine(textGroup, textLines[0], segment.id, 0, centerX, centerY, radius, angleRad, sizes);
-        } else {
-            // Two lines - create them with clear vertical separation
-            textLines.forEach((line, index) => {
-                if (line.trim()) {
-                    this.createTextLine(textGroup, line.trim(), segment.id, index, centerX, centerY, radius, angleRad, sizes);
-                }
-            });
+        group.appendChild(icon);
+
+        // Full prize name on up to 3 lines, centred in the band between the
+        // hub and the icon. Font size is capped by the slice width at that
+        // radius (so 3 lines fit) and by the band length (so the longest
+        // line fits) - names are never abbreviated.
+        const lines = this.wrapPrizeLabel(segment.name);
+        // 3-line labels sit a little further out, where the slice is wider
+        const labelRadius = radius * (lines.length === 3 ? 0.62 : 0.58);
+        const bandLength = radius * 0.4;
+        const longest = Math.max(...lines.map(line => line.length));
+        const lineHeight = lines.length === 3 ? 1.04 : 1.1;
+        const fontSize = Math.min(
+            radius * ({ 1: 0.055, 2: 0.048, 3: 0.046 }[lines.length] || 0.036),
+            (labelRadius * sliceRad * 0.86) / (lines.length * lineHeight),
+            bandLength / (longest * 0.62)
+        );
+
+        const label = document.createElementNS(SVG_NS, 'text');
+        label.setAttribute('class', 'wheel-label');
+        label.setAttribute('text-anchor', 'middle');
+        label.setAttribute('dominant-baseline', 'central');
+        label.setAttribute('font-size', fontSize);
+        label.setAttribute('fill', segment.textColor);
+        if (segment.textColor.toUpperCase() === '#FFFFFF') {
+            label.setAttribute('stroke', 'rgba(20, 0, 10, 0.45)');
+            label.setAttribute('stroke-width', fontSize * 0.14);
         }
-        
-        // Add display element (icon or emoji) to group
-        textGroup.appendChild(displayElement);
-        
-        // Add group to SVG
-        svg.appendChild(textGroup);
+        lines.forEach((line, i) => {
+            const tspan = document.createElementNS(SVG_NS, 'tspan');
+            tspan.setAttribute('x', centerX + dir * labelRadius);
+            tspan.setAttribute('y', centerY + (i - (lines.length - 1) / 2) * fontSize * lineHeight);
+            tspan.textContent = line;
+            label.appendChild(tspan);
+        });
+        group.appendChild(label);
+
+        svg.appendChild(group);
     }
 
-    createTextLine(textGroup, lineText, segmentId, lineIndex, centerX, centerY, radius, angleRad, sizes) {
-        // Create unique path ID for this text line
-        const linePathId = `textPath_${segmentId}_line${lineIndex}`;
-        const linePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        
-        // Calculate slice angle (360° / 23 = ~15.65°)
-        const sliceAngleDeg = 360 / 23;
-        const sliceAngleRad = sliceAngleDeg * (Math.PI / 180);
-        
-        // Position lines at different angles WITHIN the same slice to avoid stacking
-        // First line slightly above center, second line slightly below center
-        const angleOffset = (lineIndex - 0.5) * (sliceAngleRad * 0.3); // 30% of slice width offset
-        const adjustedAngleRad = angleRad + angleOffset;
-        
-        // Use same radial distance for both lines to keep them aligned
-        const startRadius = radius * 0.50; // Start closer to emoji for more text space
-        const endRadius = radius * 0.92;   // End closer to edge for more text space
-        
-        const lineStartX = centerX + startRadius * Math.cos(adjustedAngleRad);
-        const lineStartY = centerY + startRadius * Math.sin(adjustedAngleRad);
-        const lineEndX = centerX + endRadius * Math.cos(adjustedAngleRad);
-        const lineEndY = centerY + endRadius * Math.sin(adjustedAngleRad);
-        
-        // Create the path for this line
-        linePath.setAttribute('id', linePathId);
-        linePath.setAttribute('d', `M ${lineStartX} ${lineStartY} L ${lineEndX} ${lineEndY}`);
-        linePath.setAttribute('stroke', 'none');
-        linePath.setAttribute('fill', 'none');
-        
-        // Create text element for this line
-        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('font-size', sizes.fontSize.text);
-        text.setAttribute('font-weight', 'bold');
-        text.setAttribute('fill', '#ffffff');
-        text.setAttribute('stroke', '#000000');
-        text.setAttribute('stroke-width', '0.2');
-        
-        const textPathElement = document.createElementNS('http://www.w3.org/2000/svg', 'textPath');
-        textPathElement.setAttribute('href', `#${linePathId}`);
-        textPathElement.setAttribute('startOffset', '0%');
-        textPathElement.textContent = lineText;
-        
-        text.appendChild(textPathElement);
-        
-        // Add path and text to group
-        textGroup.appendChild(linePath);
-        textGroup.appendChild(text);
-    }
+    // Wrap a prize name into at most `maxLines` lines on word boundaries,
+    // widening the per-line budget rather than ever truncating a word.
+    wrapPrizeLabel(name, maxLines = 3) {
+        const words = String(name || '').toUpperCase().split(/\s+/).filter(Boolean);
+        if (words.length === 0) return [''];
 
-    formatPrizeNameVertical(name) {
-        // Format name for vertical display within segment
-        const maxLineLength = 10;
-        const words = name.split(' ');
-        const lines = [];
-        let currentLine = '';
-        
-        for (const word of words) {
-            if ((currentLine + ' ' + word).length <= maxLineLength) {
-                currentLine = currentLine ? currentLine + ' ' + word : word;
-            } else {
-                if (currentLine) {
-                    lines.push(currentLine);
-                    currentLine = word;
+        for (let limit = 11; ; limit++) {
+            const lines = [];
+            for (const word of words) {
+                const last = lines[lines.length - 1];
+                if (last !== undefined && `${last} ${word}`.length <= limit) {
+                    lines[lines.length - 1] = `${last} ${word}`;
                 } else {
-                    // Word is too long, split it
-                    lines.push(word.substring(0, maxLineLength));
-                    currentLine = word.substring(maxLineLength);
+                    lines.push(word);
                 }
             }
+            if (lines.length <= maxLines) return lines;
         }
-        
-        if (currentLine) {
-            lines.push(currentLine);
-        }
-        
-        // Limit to 3 lines max to fit in segment
-        return lines.slice(0, 3).join('\n');
-    }
-
-    formatPrizeNameForSegment(name) {
-        // Optimized formatting for 23 segments - shorter text
-        const words = name.split(' ');
-        
-        // For very long names, use abbreviations
-        if (name.length > 20) {
-            return this.abbreviatePrizeName(name);
-        }
-        
-        if (words.length <= 2) {
-            return words.join('\n');
-        }
-        
-        // For 3+ words, try to create balanced lines
-        if (words.length === 3) {
-            return `${words[0]}\n${words[1]}\n${words[2]}`;
-        }
-        
-        // For longer names, split into 2-3 lines
-        const mid = Math.ceil(words.length / 2);
-        const firstLine = words.slice(0, mid).join(' ');
-        const secondLine = words.slice(mid).join(' ');
-        
-        return `${firstLine}\n${secondLine}`;
-    }
-    
-    abbreviatePrizeName(name) {
-        // Create smart abbreviations for long prize names
-        const abbreviations = {
-            'smartwatch + mini cooler': 'Watch +\nCooler',
-            'defy buds + g speaker': 'Buds +\nSpeaker', 
-            'power bank + neckband': 'PowerBank\n+ Neckband',
-            'intex home theatre': 'Intex\nTheatre',
-            'zebronics home theatre': 'Zebronics\nTheatre',
-            'zebronics astra bt speaker': 'Zebronics\nBT Speaker',
-            'zebronics bt astra speaker': 'Zebronics\nBT Speaker',
-            'smart tv 32 inches': 'Smart TV\n32"',
-            'boult 60w soundbar': 'Boult\nSoundbar',
-            'free pouch and screen guard': 'Pouch +\nGuard',
-            'trimmer + skull candy earphones': 'Trimmer +\nEarphones',
-            'skull candy earphones + selie stick': 'Skull Candy\n+ Stick',
-            'powerbank + wired earphones': 'PowerBank\n+ Earphones',
-            'massage gun': 'Massage\nGun',
-            'defy buds + screen guard': 'Defy Buds\n+ Guard',
-            'dinner set': 'Dinner\nSet',
-            'pressure cooker': 'Pressure\nCooker',
-            'boat smartwatch': 'Boat\nSmartwatch',
-            'silver coin': 'Silver\nCoin',
-            'washing machine': 'Washing\nMachine',
-            'air cooler': 'Air\nCooler',
-            'mixer grinder': 'Mixer\nGrinder',
-            'gas stove': 'Gas\nStove',
-            'luggage bag': 'Luggage\nBag',
-            'jio tab': 'Jio\nTab',
-            'mi smart speaker': 'Mi\nSpeaker'
-        };
-        
-        const lowerName = name.toLowerCase();
-        if (abbreviations[lowerName]) {
-            return abbreviations[lowerName];
-        }
-        
-        // Fallback: truncate and add ellipsis
-        if (name.length > 15) {
-            return name.substring(0, 12) + '...';
-        }
-        
-        return name;
-    }
-    
-    formatPrizeNameRadial(name) {
-        // Format name for radial display (single line flowing outward)
-        // Use smart abbreviations for long names
-        if (name.length > 20) {
-            return this.abbreviatePrizeNameRadial(name);
-        }
-        
-        // For shorter names, just clean up spacing
-        return name.replace(/\s+/g, ' ').trim();
-    }
-    
-    abbreviatePrizeNameRadial(name) {
-        // Create compact abbreviations for radial display - more aggressive for better fit
-        const abbreviations = {
-            // Combo items - compact format
-            'smartwatch + mini cooler': 'Watch+Cooler',
-            'defy buds + g speaker': 'Buds+Speaker', 
-            'defy buds + google speaker': 'Buds+Speaker',
-            'power bank + neckband': 'PwrBnk+Neck',
-            'powerbank + neckband': 'PwrBnk+Neck',
-            'trimmer + skull candy earphones': 'Trimmer+Earph',
-            'trimmer + skullcandy earphones': 'Trimmer+Earph',
-            'skull candy earphones + selie stick': 'SkullCandy+Stick',
-            'powerbank + wired earphones': 'PwrBnk+Earph',
-            'defy buds + screen guard': 'Buds+Guard',
-            'free pouch and screen guard': 'Pouch+Guard',
-            
-            // Home appliances - shortened
-            'intex home theatre': 'Intex Theatre',
-            'zebronics home theatre': 'Zebr Theatre',
-            'zebronics astra bt speaker': 'Zebr BT Spkr',
-            'zebronics bt astra speaker': 'Zebr BT Spkr',
-            'smart tv 32 inches': 'Smart TV 32"',
-            'smart tv 32"': 'Smart TV 32"',
-            'boult 60w soundbar': 'Boult Sndbar',
-            'mi smart speaker': 'Mi Speaker',
-            'xiaomi smart speaker': 'Xiaomi Spkr',
-            'pressure cooker': 'Pres Cooker',
-            'washing machine': 'Wash Machine',
-            'mixer grinder': 'Mixer Grndr',
-            'refrigerator': 'Fridge',
-            'air cooler': 'Air Cooler',
-            'gas stove': 'Gas Stove',
-            'dinner set': 'Dinner Set',
-            'casserolle set': 'Casserole',
-            
-            // Electronics - compact
-            'boat smartwatch': 'Boat Watch',
-            'budget smartphone': 'Budget Phone',
-            'low cost mobile': 'Budget Phone',
-            'massage gun': 'Massage Gun',
-            'jio tab': 'Jio Tab',
-            'silver coin': 'Silver Coin',
-            'luggage bags': 'Luggage Bag'
-        };
-        
-        const lowerName = name.toLowerCase().trim();
-        if (abbreviations[lowerName]) {
-            return abbreviations[lowerName];
-        }
-        
-        // Fallback: smart truncation with max 14 chars
-        if (name.length > 14) {
-            // Try to truncate at word boundary
-            const words = name.split(' ');
-            let result = words[0];
-            for (let i = 1; i < words.length; i++) {
-                if ((result + ' ' + words[i]).length <= 14) {
-                    result += ' ' + words[i];
-                } else {
-                    break;
-                }
-            }
-            return result;
-        }
-        
-        return name;
-    }
-    
-    formatPrizeNameForTwoLines(name) {
-        // Format name for two-line radial display to prevent cropping
-        const maxLineLength = 12; // Reduced for better fit in narrow segments
-        const maxPartLength = 10; // Max length for each part in combos
-        
-        // First, try to get a known abbreviation
-        const abbreviated = this.abbreviatePrizeNameRadial(name);
-        if (abbreviated !== name && abbreviated.length <= maxLineLength * 2) {
-            // If abbreviated has newline already, use it
-            if (abbreviated.includes('\n')) {
-                return abbreviated;
-            }
-            // If abbreviated fits on one line, use it
-            if (abbreviated.length <= maxLineLength) {
-                return abbreviated;
-            }
-            // Use abbreviated name for further processing
-            name = abbreviated;
-        }
-        
-        // Handle combo items with "+" - display both parts compactly
-        if (name.includes('+')) {
-            const parts = name.split('+').map(p => p.trim());
-            if (parts.length === 2) {
-                // Format each part to be very concise
-                const part1 = this.shortenName(parts[0], maxPartLength);
-                const part2 = this.shortenName(parts[1], maxPartLength);
-                return `${part1}\n+${part2}`;
-            }
-        }
-        
-        // Handle "and" combinations
-        if (name.toLowerCase().includes(' and ')) {
-            const parts = name.split(/\s+and\s+/i).map(p => p.trim());
-            if (parts.length === 2) {
-                const part1 = this.shortenName(parts[0], maxPartLength);
-                const part2 = this.shortenName(parts[1], maxPartLength);
-                return `${part1}\n+${part2}`;
-            }
-        }
-        
-        // If still too long, split into two lines
-        if (name.length > maxLineLength) {
-            const words = name.split(' ');
-            
-            if (words.length === 1) {
-                // Single long word - just return abbreviated version
-                return this.shortenName(name, maxLineLength);
-            } else if (words.length === 2) {
-                // Two words - one per line
-                return `${this.shortenName(words[0], maxPartLength)}\n${this.shortenName(words[1], maxPartLength)}`;
-            } else {
-                // Multiple words - balance the lines
-                const mid = Math.ceil(words.length / 2);
-                const firstLine = this.shortenName(words.slice(0, mid).join(' '), maxLineLength);
-                const secondLine = this.shortenName(words.slice(mid).join(' '), maxLineLength);
-                
-                return `${firstLine}\n${secondLine}`;
-            }
-        }
-        
-        // Short enough for single line
-        return name;
-    }
-    
-    shortenName(name, maxLength) {
-        // Shorten a name intelligently - more aggressive abbreviations
-        if (name.length <= maxLength) return name;
-        
-        // Common abbreviations - ordered by length (longer first for better matching)
-        const abbrevs = {
-            'refrigerator': 'Fridge',
-            'mini cooler': 'Cooler',
-            'screen guard': 'Guard',
-            'power bank': 'PwrBnk',
-            'powerbank': 'PwrBnk',
-            'smartwatch': 'Watch',
-            'skull candy': 'Skull',
-            'skullcandy': 'Skull',
-            'zebronics': 'Zebr',
-            'bluetooth': 'BT',
-            'earphones': 'Earph',
-            'neckband': 'Neck',
-            'speaker': 'Spkr',
-            'google': 'G',
-            'cooler': 'Cool',
-            'theatre': 'Thtr',
-            'soundbar': 'Sndbar',
-            'grinder': 'Grndr',
-            'machine': 'Mach',
-            'pressure': 'Pres',
-            'trimmer': 'Trim',
-            'luggage': 'Lugg'
-        };
-        
-        let result = name;
-        for (const [full, abbr] of Object.entries(abbrevs)) {
-            result = result.replace(new RegExp(full, 'gi'), abbr);
-        }
-        
-        // If still too long, truncate at word boundary without ".."
-        if (result.length > maxLength) {
-            const words = result.split(' ');
-            let truncated = words[0];
-            for (let i = 1; i < words.length; i++) {
-                if ((truncated + ' ' + words[i]).length <= maxLength) {
-                    truncated += ' ' + words[i];
-                } else {
-                    break;
-                }
-            }
-            return truncated.length > 0 ? truncated : result.substring(0, maxLength);
-        }
-        
-        return result;
-    }
-
-    formatPrizeNameForSVG(name) {
-        if (name.length > 12) {
-            const words = name.split(' ');
-            if (words.length > 1) {
-                const midPoint = Math.ceil(words.length / 2);
-                const firstLine = words.slice(0, midPoint).join(' ');
-                const secondLine = words.slice(midPoint).join(' ');
-                return `${firstLine}\n${secondLine}`;
-            }
-        }
-        return name;
     }
 
     // ==========================================
@@ -1304,53 +1002,79 @@ class PickerWheelUI {
             colors = window.themeManager.getWheelColors();
         } else {
             // Default neon magenta palette (mirrors theme-manager.js's defaultTheme)
-            colors = [
-                '#1A0010', '#FF2D78', '#2D0018', '#FF6FA8', '#3D0025', '#FF9EC4',
-            ];
+            colors = ['#1B0510', '#E50065', '#2A0716', '#FF4FA3', '#22040F', '#FF2B86'];
+        }
+
+        // Palettes alternate dark/bright. With an odd number of prizes the last
+        // slice would land next to slice 0 in the same tone, right under the
+        // pointer - bridge that seam with a blend of the first two colors.
+        const count = this.availablePrizes.length;
+        if (count % 2 === 1 && colors.length % 2 === 0 && index === count - 1) {
+            return this.blendHex(colors[0], colors[1]);
         }
 
         return colors[index % colors.length];
     }
 
+    blendHex(a, b) {
+        const parse = hex => {
+            let h = (hex || '#000000').replace('#', '');
+            if (h.length === 3) h = h.split('').map(c => c + c).join('');
+            return h.slice(0, 6).match(/.{2}/g).map(part => parseInt(part, 16));
+        };
+        const [ra, ga, ba] = parse(a);
+        const [rb, gb, bb] = parse(b);
+        const mix = (x, y) => Math.round((x + y) / 2).toString(16).padStart(2, '0');
+        return `#${mix(ra, rb)}${mix(ga, gb)}${mix(ba, bb)}`.toUpperCase();
+    }
+
     getTextColor(category, segmentColor) {
         // Light wheel shades need dark text, others use white
         const lightColors = ['#FF9EC4', '#FF6FA8'];
-        if (segmentColor && lightColors.includes(segmentColor)) {
+        if (segmentColor && lightColors.includes(segmentColor.toUpperCase())) {
             return '#1a1a2e';  // Dark text for light backgrounds
         }
         return '#FFFFFF';  // White text for all other backgrounds
     }
 
-    // Material Symbols (Outlined) icon name per prize, used instead of an emoji
-    // in each wedge. Matched by exact prize name (case-insensitive); falls back
-    // to a generic "redeem" gift icon for anything unmapped.
+    // Material Symbols (Outlined) icon per prize, keyed by the name with
+    // everything but letters/digits stripped, so "Air Cooler", "AIRCOOLER"
+    // and "air-cooler" all match. Unmapped prizes get a generic gift icon.
+    // Every icon used here must also be in the icon_names list of the font
+    // <link> in index.html (the font is subsetted to keep it small).
     static PRIZE_ICON_MAP = {
-        'air cooler': 'mode_fan',
-        '32-inch tv': 'tv',
-        'washing machine': 'local_laundry_service',
-        'home theatre': 'theaters',
-        'luggage bag': 'luggage',
-        'govo buds': 'earbuds',
-        'smart audio sunglasses': 'wb_sunny',
-        'boult q5 bluetooth speaker': 'speaker',
-        'g5 game + sup gaming handheld': 'sports_esports',
-        'soundbar': 'graphic_eq',
-        'screen guard + back cover': 'smartphone',
-        'wired earphones': 'headphones',
-        'neckband': 'headset',
-        'power bank': 'battery_charging_full',
-        'smart watch': 'watch',
-        'dinner set': 'restaurant',
-        'casserole set': 'dinner_dining',
-        'meetha set': 'cake',
-        'laptop stand': 'laptop',
-        'massage gun': 'spa',
-        'induction stove': 'local_fire_department',
-        '2-in-1 juicer': 'blender',
+        aircooler: 'mode_fan',
+        '32inchtv': 'tv',
+        '32inchestv': 'tv',
+        washingmachine: 'local_laundry_service',
+        hometheatre: 'theaters',
+        luggagebag: 'luggage',
+        govobuds: 'earbuds',
+        smartaudiosunglasses: 'eyeglasses',
+        smartaudio: 'spatial_audio',
+        sunglasses: 'eyeglasses',
+        boultq5bluetoothspeaker: 'speaker',
+        g5gamesupgaminghandheld: 'sports_esports',
+        g5gameandsupgaminghandheld: 'sports_esports',
+        soundbar: 'soundbar',
+        screenguardbackcover: 'smartphone',
+        screenguardandbackcover: 'smartphone',
+        wiredearphones: 'headphones',
+        neckband: 'headset_mic',
+        powerbank: 'battery_charging_full',
+        smartwatch: 'watch',
+        dinnerset: 'dinner_dining',
+        casseroleset: 'soup_kitchen',
+        cassoroleset: 'soup_kitchen',
+        meethaset: 'cake',
+        laptopstand: 'laptop',
+        massagegun: 'spa',
+        inductionstove: 'cooking',
+        '2in1juicer': 'blender',
     };
 
     getPrizeIcon(prizeName) {
-        const key = (prizeName || '').trim().toLowerCase();
+        const key = (prizeName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
         return PickerWheelUI.PRIZE_ICON_MAP[key] || 'redeem';
     }
 
@@ -2243,22 +1967,10 @@ class PickerWheelUI {
         console.log(`   Setting name to: ${prize.name}`);
 
         if (prizeEmoji) {
-            // Check if this is a combo item first
+            // Same flat icon as the wheel slice (combo emojis for legacy combo
+            // prizes); size comes from CSS
             const comboEmoji = this.getComboEmojiDisplay(prize.name);
-            const sizes = this.getMobileSizes();
-            
-            prizeEmoji.innerHTML = '';
-            
-            if (comboEmoji) {
-                // Use combo emoji display for combo items
-                prizeEmoji.textContent = comboEmoji;
-                prizeEmoji.style.fontSize = sizes.fontSize.modal;
-                console.log(`🎨 Using combo emoji in modal for ${prize.name}: ${comboEmoji}`);
-            } else {
-                // Use regular emoji
-                prizeEmoji.textContent = prize.emoji || '🎁';
-                prizeEmoji.style.fontSize = sizes.fontSize.modal;
-            }
+            prizeEmoji.textContent = comboEmoji || this.getPrizeIcon(prize.name);
         }
         if (prizeName) prizeName.textContent = prize.name;
 
@@ -2380,8 +2092,8 @@ class PickerWheelUI {
         // Determine confetti intensity based on category
         const confettiCount = category === 'rare' || category === 'ultra_rare' ? 50 : 30;
         const colors = category === 'rare' || category === 'ultra_rare' 
-            ? ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8']
-            : ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4'];
+            ? ['#FFD36B', '#F5B83D', '#FF2B86', '#FF4FA3', '#E50065', '#FFFFFF', '#FFC2DD', '#FF8CC0']
+            : ['#FFD36B', '#FF2B86', '#FF4FA3', '#E50065', '#FFFFFF'];
         
         // Create confetti pieces
         for (let i = 0; i < confettiCount; i++) {
@@ -2695,40 +2407,38 @@ class PickerWheelUI {
             const noDataRow = document.createElement('tr');
             noDataRow.className = 'no-data-row';
             noDataRow.innerHTML = `
-                <td colspan="4">No prizes won today yet. Spin the wheel to get started! 🎯</td>
+                <td colspan="3">No prizes won today yet. Spin the wheel to get started!</td>
             `;
             this.dailyPrizesTableBody.appendChild(noDataRow);
             return;
         }
         
-        // Add prize rows
+        // Add prize rows (category intentionally not shown)
         this.dailyPrizesLog.forEach(prize => {
             const row = document.createElement('tr');
-            // Get display for this prize (prefer combo emojis for combo items)
+
+            const prizeCell = document.createElement('td');
+            const prizeWrap = document.createElement('div');
+            prizeWrap.className = 'prize-cell';
+            const icon = document.createElement('span');
             const comboEmoji = this.getComboEmojiDisplay(prize.name);
-            let displayIcon = '';
-            
-            if (comboEmoji) {
-                // Use combo emoji for combo items
-                displayIcon = `<span class="prize-emoji" style="font-size: 0.9rem;">${comboEmoji}</span>`;
-            } else {
-                // Use regular emoji
-                displayIcon = `<span class="prize-emoji">${prize.emoji}</span>`;
-            }
-            
-            row.innerHTML = `
-                <td>
-                    <div class="prize-cell">
-                        ${displayIcon}
-                        <span class="prize-name">${prize.name}</span>
-                    </div>
-                </td>
-                <td class="time-cell">${prize.formatted_time}</td>
-                <td class="user-cell">${prize.user_identifier}</td>
-                <td>
-                    <span class="category-badge ${prize.category || 'common'}">${(prize.category || 'common').replace('_', ' ')}</span>
-                </td>
-            `;
+            icon.className = comboEmoji ? 'log-prize-icon' : 'log-prize-icon material-symbol';
+            icon.textContent = comboEmoji || this.getPrizeIcon(prize.name);
+            const name = document.createElement('span');
+            name.className = 'log-prize-name';
+            name.textContent = prize.name;
+            prizeWrap.append(icon, name);
+            prizeCell.appendChild(prizeWrap);
+
+            const timeCell = document.createElement('td');
+            timeCell.className = 'time-cell';
+            timeCell.textContent = prize.formatted_time;
+
+            const userCell = document.createElement('td');
+            userCell.className = 'user-cell';
+            userCell.textContent = prize.user_identifier;
+
+            row.append(prizeCell, timeCell, userCell);
             this.dailyPrizesTableBody.appendChild(row);
         });
     }
@@ -2753,7 +2463,7 @@ class PickerWheelUI {
         if (this.dailyPrizesTableBody) {
             this.dailyPrizesTableBody.innerHTML = `
                 <tr class="no-data-row">
-                    <td colspan="4">Log display cleared. Click "Refresh" to reload data. 🔄</td>
+                    <td colspan="3">Log display cleared. Click "Refresh" to reload data.</td>
                 </tr>
             `;
         }

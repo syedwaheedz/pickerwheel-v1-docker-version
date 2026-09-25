@@ -1,15 +1,15 @@
 // Service Worker for PickerWheel Contest App
-const VERSION = '14.0_popup_redesign';
+const VERSION = '15.0_cinematic_redesign';
 const CACHE_NAME = 'pickerwheel-contest-v' + VERSION;
 // Note: each file below carries its own cache-busting query string (set in
 // index.html) rather than a single shared VERSION, so they're listed as-is.
 const STATIC_ASSETS = [
     '/',
     '/index.html',
-    '/style.css?v=19.0_popup_redesign',
-    '/theme-manager.js?v=2.0_neon',
-    '/wheel.js?v=15.0_neon_icons',
-    'https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Poppins:wght@300;400;600;700;800;900&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&display=swap'
+    '/style.css?v=20.0_cinematic',
+    '/theme-manager.js?v=3.0_cinematic',
+    '/wheel.js?v=16.0_cinematic',
+    'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap'
 ];
 
 // Install event - cache static assets

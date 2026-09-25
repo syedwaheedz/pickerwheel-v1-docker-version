@@ -23,7 +23,13 @@
     </script>
 
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Poppins:wght@300;400;600;700;800;900&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Icon font subset to just the icons used on this page (a few KB).
+         Adding a prize icon in wheel.js's PRIZE_ICON_MAP? Add it here too,
+         keeping the list alphabetical. -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300..400,0..1,0&icon_names=ads_click,arrow_forward,auto_awesome,autorenew,battery_charging_full,blender,cake,cooking,dinner_dining,earbuds,eyeglasses,headphones,headset_mic,laptop,local_laundry_service,luggage,mode_fan,palette,redeem,refresh,settings,smartphone,soundbar,soup_kitchen,spa,spatial_audio,speaker,sports_esports,theaters,tv,visibility_off,volume_off,volume_up,watch&display=block" rel="stylesheet">
 
     <!-- Meta tags -->
     <meta name="description" content="myT MOBILES Spin & Win - Win amazing prizes with every spin!">
@@ -31,14 +37,14 @@
     <meta name="author" content="myT MOBILES">
     
     <!-- PWA Meta -->
-    <meta name="theme-color" content="#12000A">
+    <meta name="theme-color" content="#09070A">
     <link rel="manifest" href="manifest.json">
     
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="myt-mobiles-logo.png">
     
     <!-- Styles with cache busting -->
-    <link rel="stylesheet" href="style.css?v=19.0_popup_redesign">
+    <link rel="stylesheet" href="style.css?v=20.0_cinematic">
 </head>
 <body>
     <!-- Background Elements -->
@@ -56,76 +62,85 @@
     <!-- Main Container -->
     <div class="container">
         <!-- Header -->
-        <div class="header">
+        <header class="header">
             <!-- Top Navigation -->
             <div class="top-nav">
                 <div class="brand-logo">
                     <img src="myt-mobiles-logo.png" alt="myT MOBILES" class="logo-img">
+                    <span class="brand-divider" aria-hidden="true"></span>
+                    <span class="brand-tagline">Mega<br>Deal Days</span>
                 </div>
                 <div class="title-section">
-                    <h1 class="main-title">🎉 SPIN & WIN 🎊</h1>
-                    <p class="subtitle">✨ myT Mobiles Special Offer - Win Exciting Prizes! ✨</p>
+                    <h1 class="main-title"><span class="title-lead">SPIN &amp; </span><span class="title-accent">WIN</span></h1>
+                    <p class="subtitle">✨ Win Exciting Prizes! ✨</p>
                     <p class="offer-period">Spin the wheel and win amazing prizes!</p>
                 </div>
                 <div class="control-buttons">
                     <button class="control-btn" id="soundToggle" title="Toggle Sound">
-                        <span class="control-icon">🔊</span>
+                        <span class="control-icon material-symbol">volume_up</span>
                     </button>
                     <button class="control-btn" id="effectsToggle" title="Toggle Effects">
-                        <span class="control-icon">✨</span>
+                        <span class="control-icon material-symbol">auto_awesome</span>
                     </button>
                     <button class="control-btn" id="designModeToggle" title="Switch design (Neon / Material)" onclick="toggleDesignMode()">
                         <span class="control-icon material-symbol" id="designModeIcon">palette</span>
                     </button>
                     <button class="control-btn" id="adminBtn" onclick="openAdminPanel()" title="Admin Panel" style="display: none;">
-                        <span class="control-icon">⚙️</span>
+                        <span class="control-icon material-symbol">settings</span>
                     </button>
                 </div>
             </div>
-        </div>
+        </header>
 
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Wheel Section -->
-            <div class="wheel-container">
-                <div class="wheel-pointer" id="wheelPointer"></div>
-                <div class="wheel-sparks" id="wheelSparks">
-                    <div class="spark"></div>
-                    <div class="spark"></div>
-                    <div class="spark"></div>
-                    <div class="spark"></div>
-                    <div class="spark"></div>
-                </div>
-                <div class="wheel" id="wheel">
-                    <div class="wheel-inner" id="wheelInner">
-                        <!-- Segments will be generated dynamically -->
+        <!-- Main Content: wheel stage + How It Works side card -->
+        <main class="main-content">
+            <section class="wheel-stage">
+                <div class="wheel-container">
+                    <div class="wheel-pointer" id="wheelPointer"></div>
+                    <div class="wheel-sparks" id="wheelSparks">
+                        <div class="spark"></div>
+                        <div class="spark"></div>
+                        <div class="spark"></div>
+                        <div class="spark"></div>
+                        <div class="spark"></div>
                     </div>
-                    <button class="wheel-center-button" id="spinButton">SPIN</button>
+                    <div class="wheel" id="wheel">
+                        <div class="wheel-inner" id="wheelInner">
+                            <!-- Segments will be generated dynamically -->
+                        </div>
+                        <button class="wheel-center-button" id="spinButton">SPIN</button>
+                    </div>
                 </div>
-            </div>
+
+                <!-- Secondary CTA: triggers the same spin as the center button -->
+                <button class="spin-cta" id="spinCta" type="button" onclick="document.getElementById('spinButton').click()">
+                    Spin the Wheel <span class="material-symbol" aria-hidden="true">arrow_forward</span>
+                </button>
+                <p class="spin-caption">Your chance to win amazing prizes!</p>
+            </section>
 
             <!-- How It Works -->
-            <div class="how-it-works">
+            <aside class="how-it-works">
                 <h3 class="how-it-works-title">How It Works</h3>
-                <div class="how-it-works-steps">
-                    <div class="step-item">
+                <ol class="how-it-works-steps">
+                    <li class="step-item">
                         <span class="step-number">01</span>
                         <span class="step-icon material-symbol">ads_click</span>
-                        <p class="step-text">Click on Spin the Wheel</p>
-                    </div>
-                    <div class="step-item">
+                        <p class="step-text">Click on<br>Spin the Wheel</p>
+                    </li>
+                    <li class="step-item">
                         <span class="step-number">02</span>
-                        <span class="step-icon material-symbol">casino</span>
-                        <p class="step-text">Spin &amp; wait for the result</p>
-                    </div>
-                    <div class="step-item">
+                        <span class="step-icon material-symbol">autorenew</span>
+                        <p class="step-text">Spin &amp; wait<br>for the result</p>
+                    </li>
+                    <li class="step-item">
                         <span class="step-number">03</span>
                         <span class="step-icon material-symbol">redeem</span>
-                        <p class="step-text">Win exciting prizes!</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+                        <p class="step-text">Win exciting<br>prizes!</p>
+                    </li>
+                </ol>
+            </aside>
+        </main>
     </div>
 
     <!-- Loading Overlay -->
@@ -139,7 +154,7 @@
     <!-- Prize Modal -->
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal" id="prizeModal">
-            <div class="prize-emoji" id="prizeEmoji">🎁</div>
+            <div class="prize-emoji material-symbol" id="prizeEmoji">redeem</div>
             <h2 class="prize-name" id="prizeName">Prize Name</h2>
             <div class="prize-display" id="prizeDisplay">
                 <!-- Prize details will be shown here -->
@@ -148,39 +163,38 @@
         </div>
     </div>
 
-    <!-- Daily Prizes Log -->
-    <div class="daily-prizes-log-container">
+    <!-- Recent Winners (today's prizes won) -->
+    <section class="daily-prizes-log-container">
         <div class="daily-prizes-header">
-            <h3>🏆 Today's Prizes Won</h3>
+            <h3>Recent Winners <span class="log-subtitle">Today</span></h3>
             <div class="log-controls">
-                <button id="refreshLogBtn" class="log-btn">🔄 Refresh</button>
-                <button id="clearLogBtn" class="log-btn clear-btn">🗑️ Clear Display</button>
+                <button id="refreshLogBtn" class="log-btn"><span class="material-symbol" aria-hidden="true">refresh</span> Refresh</button>
+                <button id="clearLogBtn" class="log-btn clear-btn"><span class="material-symbol" aria-hidden="true">visibility_off</span> Clear Display</button>
             </div>
         </div>
-        
+
         <div class="daily-prizes-table-container">
             <table class="daily-prizes-table" id="dailyPrizesTable">
                 <thead>
                     <tr>
-                        <th>🎁 Prize</th>
-                        <th>⏰ Time</th>
-                        <th>👤 User</th>
-                        <th>🏷️ Category</th>
+                        <th>Prize</th>
+                        <th>Time</th>
+                        <th>User</th>
                     </tr>
                 </thead>
                 <tbody id="dailyPrizesTableBody">
                     <tr class="no-data-row">
-                        <td colspan="4">No prizes won today yet. Spin the wheel to get started! 🎯</td>
+                        <td colspan="3">No prizes won today yet. Spin the wheel to get started!</td>
                     </tr>
                 </tbody>
             </table>
         </div>
-        
+
         <div class="log-stats" id="logStats">
-            <span class="stat-item">📊 Total: <span id="totalPrizesCount">0</span></span>
-            <span class="stat-item">⏰ Last updated: <span id="lastUpdated">Never</span></span>
+            <span class="log-stat">Total: <span id="totalPrizesCount">0</span></span>
+            <span class="log-stat">Last updated: <span id="lastUpdated">Never</span></span>
         </div>
-    </div>
+    </section>
 
     <!-- Scripts -->
     <script>
@@ -406,10 +420,10 @@
     </script>
 
     <!-- Theme Manager - Load before wheel.js -->
-    <script src="theme-manager.js?v=2.0_neon"></script>
+    <script src="theme-manager.js?v=3.0_cinematic"></script>
 
     <!-- Script with cache busting -->
-    <script src="wheel.js?v=15.0_neon_icons"></script>
+    <script src="wheel.js?v=16.0_cinematic"></script>
     
     <!-- Socket.IO for real-time updates -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -453,7 +467,7 @@
             }
             
             // Force reload if version mismatch
-            const currentVersion = '14.0_popup_redesign';
+            const currentVersion = '15.0_cinematic_redesign';
             const storedVersion = localStorage.getItem('wheel_version');
             
             if (storedVersion && storedVersion !== currentVersion) {

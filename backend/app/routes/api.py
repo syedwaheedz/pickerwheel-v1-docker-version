@@ -20,17 +20,17 @@ FALLBACK_DEFAULT_THEME = {
     "name": "default",
     "background": {
         "type": "gradient",
-        "colors": ["#FF2D78", "#0D0007", "#7A0040"],
+        "colors": ["#E50065", "#09070A", "#650A2C"],
         "style": "radial"
     },
     "wheel": {
-        "colors": ["#1A0010", "#FF2D78", "#2D0018", "#FF6FA8", "#3D0025", "#FF9EC4"],
-        "borderColor": "#FF2D78",
+        "colors": ["#1B0510", "#E50065", "#2A0716", "#FF4FA3", "#22040F", "#FF2B86"],
+        "borderColor": "#FF2B86",
         "textColor": "#FFFFFF"
     },
     "header": {
-        "backgroundColor": "#12000A",
-        "gradientEnd": "#FF2D78",
+        "backgroundColor": "#16050D",
+        "gradientEnd": "#650A2C",
         "textColor": "#FFFFFF",
         "title": "SPIN & WIN",
         "subtitle": "Win Exciting Prizes!"
