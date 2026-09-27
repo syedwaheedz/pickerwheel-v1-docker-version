@@ -6,7 +6,7 @@ Flask app factory with Socket.IO for real-time updates
 import os
 import logging
 from datetime import datetime, date
-from flask import Flask
+from flask import Flask, redirect, request
 from flask.json.provider import DefaultJSONProvider
 from flask_cors import CORS
 from flask_socketio import SocketIO
@@ -86,8 +86,22 @@ def create_app(config_name=None):
     # Register static file routes
     @app.route('/')
     def serve_index():
+        # Requests that reach this app via Cloudflare (the public
+        # pickerwheel.mytmobiles.com path, gated by Access) always carry
+        # this header; direct LAN/localhost requests never do, since they
+        # never touch Cloudflare's edge. The public domain's primary use
+        # is admin access - the customer wheel is meant to be used from
+        # the local network instead, where it isn't tunnel-latency-bound -
+        # so bare '/' over the public domain goes to /admin, while local
+        # access keeps serving the wheel here exactly as before.
+        if request.headers.get('CF-Connecting-IP'):
+            return redirect('/admin')
         return app.send_static_file('index.html')
-    
+
+    @app.route('/app')
+    def serve_app():
+        return app.send_static_file('index.html')
+
     @app.route('/admin')
     def serve_admin():
         return app.send_static_file('admin.html')
