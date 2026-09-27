@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>myT MOBILES - Spin & Win!</title>
 
+    <!-- Debug flag gate - must load before any script that calls dlog/dwarn -->
+    <script src="debug.js?v=1.0"></script>
+
     <!-- Design mode (Neon/Material) applied before CSS loads, to avoid a
          flash of the wrong look on page load -->
     <script>
@@ -335,10 +338,10 @@
             adminSessionTimeout = setTimeout(() => {
                 isAdminAuthenticated = false;
                 hideAdminButton();
-                console.log('Admin session expired');
+                dlog('Admin session expired');
             }, 10 * 60 * 1000); // 10 minutes
-            
-            console.log('Admin session started (10 minutes)');
+
+            dlog('Admin session started (10 minutes)');
         }
 
         // Secret key combination for admin access (Ctrl+Alt+A)
@@ -437,7 +440,7 @@
         (function() {
             // Clear any cached data
             function clearCache() {
-                console.log('🧹 Clearing cache...');
+                dlog('🧹 Clearing cache...');
                 
                 // Clear all wheel-related cache
                 const keysToRemove = [];
@@ -451,7 +454,7 @@
                 
                 // Remove identified keys
                 keysToRemove.forEach(key => {
-                    console.log('🧹 Clearing cached data:', key);
+                    dlog('🧹 Clearing cached data:', key);
                     localStorage.removeItem(key);
                 });
                 
@@ -473,7 +476,7 @@
             const storedVersion = localStorage.getItem('wheel_version');
             
             if (storedVersion && storedVersion !== currentVersion) {
-                console.log('🔄 Version changed, forcing refresh...');
+                dlog('🔄 Version changed, forcing refresh...');
                 clearCache();
                 localStorage.setItem('wheel_version', currentVersion);
                 window.location.reload(true);

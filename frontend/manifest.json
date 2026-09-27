@@ -9,13 +9,13 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "myt-mobiles-logo.png",
+      "src": "myt-mobiles-logo-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "myt-mobiles-logo.png",
+      "src": "myt-mobiles-logo-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

@@ -3,6 +3,20 @@
  * Focused on proper wheel mechanics and UI
  */
 
+// Plain fetch() never times out on its own - if a request never gets a
+// response (server thread exhaustion, a stuck DB query, a dropped
+// connection that never errors), an awaited fetch in the spin flow would
+// hang forever with no way for its try/finally to run, leaving the wheel
+// stuck on "SPINNING..." with the button disabled until the page is
+// reloaded. This wraps fetch with an AbortController-based timeout so a
+// hung request fails after a bounded wait instead of hanging indefinitely.
+function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch(url, { ...options, signal: controller.signal })
+        .finally(() => clearTimeout(timeoutId));
+}
+
 class PickerWheelUI {
     constructor() {
         // Use relative path for API calls to work with any host/port
@@ -88,7 +102,7 @@ class PickerWheelUI {
 
     async init() {
         try {
-            console.log('🎯 Initializing PickerWheel UI...');
+            dlog('🎯 Initializing PickerWheel UI...');
             
             // Load theme configuration first
             if (window.themeManager) {
@@ -130,7 +144,7 @@ class PickerWheelUI {
             // Initialize daily prizes log
             this.initializeDailyPrizesLog();
             
-            console.log('✅ PickerWheel UI initialized successfully');
+            dlog('✅ PickerWheel UI initialized successfully');
             
         } catch (error) {
             console.error('❌ Failed to initialize UI:', error);
@@ -181,12 +195,12 @@ class PickerWheelUI {
         try {
             // Initialize Web Audio API
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            console.log('🔊 Audio system initialized');
+            dlog('🔊 Audio system initialized');
             
             // 🎵 Load sound assets
             this.loadSoundAssets();
         } catch (error) {
-            console.warn('⚠️ Audio not supported:', error);
+            dwarn('⚠️ Audio not supported:', error);
         }
     }
     
@@ -205,16 +219,16 @@ class PickerWheelUI {
                     
                     // Handle loading events
                     audio.addEventListener('canplaythrough', () => {
-                        console.log('🎵 Sound loaded:', audio.src.split('/').pop());
+                        dlog('🎵 Sound loaded:', audio.src.split('/').pop());
                     });
                     
                     audio.addEventListener('error', (e) => {
-                        console.warn('⚠️ Failed to load sound:', audio.src.split('/').pop(), e);
+                        dwarn('⚠️ Failed to load sound:', audio.src.split('/').pop(), e);
                     });
                     
                     // Handle browser audio policy restrictions
                     audio.addEventListener('play', () => {
-                        console.log('🎵 Audio playing:', audio.src.split('/').pop());
+                        dlog('🎵 Audio playing:', audio.src.split('/').pop());
                     });
                 }
             });
@@ -222,9 +236,9 @@ class PickerWheelUI {
             // Add click handler to enable audio context (required by browsers)
             this.enableAudioOnFirstInteraction();
             
-            console.log('🎵 Loading sound assets...');
+            dlog('🎵 Loading sound assets...');
         } catch (error) {
-            console.warn('⚠️ Failed to initialize sound assets:', error);
+            dwarn('⚠️ Failed to initialize sound assets:', error);
         }
     }
     
@@ -233,7 +247,7 @@ class PickerWheelUI {
             // Resume audio context if suspended
             if (this.audioContext && this.audioContext.state === 'suspended') {
                 this.audioContext.resume().then(() => {
-                    console.log('🔊 Audio context enabled on user interaction');
+                    dlog('🔊 Audio context enabled on user interaction');
                 });
             }
             
@@ -247,7 +261,7 @@ class PickerWheelUI {
             // Remove this listener after first interaction
             document.removeEventListener('click', enableAudio);
             document.removeEventListener('touchstart', enableAudio);
-            console.log('🎵 Audio system fully enabled');
+            dlog('🎵 Audio system fully enabled');
         };
         
         // Listen for first user interaction
@@ -276,7 +290,7 @@ class PickerWheelUI {
             
             return { oscillator, gainNode };
         } catch (error) {
-            console.warn('⚠️ Failed to create tick sound:', error);
+            dwarn('⚠️ Failed to create tick sound:', error);
             return null;
         }
     }
@@ -310,7 +324,7 @@ class PickerWheelUI {
             // Stop sound before wheel animation completes or if spinning stopped
             if (elapsed >= soundDuration || !this.isSpinning) {
                 this.tickInterval = null;
-                console.log('🔇 Sound faded out before wheel stops');
+                dlog('🔇 Sound faded out before wheel stops');
                 return;
             }
 
@@ -350,7 +364,7 @@ class PickerWheelUI {
         if (this.tickInterval) {
             clearTimeout(this.tickInterval);
             this.tickInterval = null;
-            console.log('🔇 Ticking sound stopped');
+            dlog('🔇 Ticking sound stopped');
         }
     }
     
@@ -361,11 +375,11 @@ class PickerWheelUI {
         try {
             this.audioElements.spinSound.currentTime = 0; // Reset to beginning
             this.audioElements.spinSound.play().catch(e => {
-                console.warn('⚠️ Failed to play spin sound:', e);
+                dwarn('⚠️ Failed to play spin sound:', e);
             });
-            console.log('🎵 Playing spin sound');
+            dlog('🎵 Playing spin sound');
         } catch (error) {
-            console.warn('⚠️ Error playing spin sound:', error);
+            dwarn('⚠️ Error playing spin sound:', error);
         }
     }
     
@@ -378,20 +392,20 @@ class PickerWheelUI {
             // Choose sound based on prize category
             if (category === 'rare' || category === 'ultra_rare') {
                 soundToPlay = this.audioElements.rareWinSound;
-                console.log('🎵 Playing rare win celebration sound');
+                dlog('🎵 Playing rare win celebration sound');
             } else {
                 soundToPlay = this.audioElements.winSound;
-                console.log('🎵 Playing win celebration sound');
+                dlog('🎵 Playing win celebration sound');
             }
             
             if (soundToPlay) {
                 soundToPlay.currentTime = 0; // Reset to beginning
                 soundToPlay.play().catch(e => {
-                    console.warn('⚠️ Failed to play win sound:', e);
+                    dwarn('⚠️ Failed to play win sound:', e);
                 });
             }
         } catch (error) {
-            console.warn('⚠️ Error playing win sound:', error);
+            dwarn('⚠️ Error playing win sound:', error);
         }
     }
     
@@ -408,9 +422,9 @@ class PickerWheelUI {
             // Stop ticking sound
             this.stopTickingSound();
             
-            console.log('🔇 All sounds stopped');
+            dlog('🔇 All sounds stopped');
         } catch (error) {
-            console.warn('⚠️ Error stopping sounds:', error);
+            dwarn('⚠️ Error stopping sounds:', error);
         }
     }
 
@@ -427,7 +441,7 @@ class PickerWheelUI {
             this.wheelSparks.classList.add('spinning');
         }
         
-        console.log('🎪 Started spinning effects - pointer vibration and friction sparks');
+        dlog('🎪 Started spinning effects - pointer vibration and friction sparks');
     }
 
     stopSpinningEffects() {
@@ -441,7 +455,7 @@ class PickerWheelUI {
             this.wheelSparks.classList.remove('spinning');
         }
         
-        console.log('🎪 Stopped spinning effects');
+        dlog('🎪 Stopped spinning effects');
     }
 
     toggleSound() {
@@ -461,7 +475,7 @@ class PickerWheelUI {
         
         // Save preference
         localStorage.setItem('picker_wheel_sound', this.soundEnabled);
-        console.log('🔊 Sound', this.soundEnabled ? 'enabled' : 'disabled');
+        dlog('🔊 Sound', this.soundEnabled ? 'enabled' : 'disabled');
     }
 
     toggleEffects() {
@@ -481,7 +495,7 @@ class PickerWheelUI {
         
         // Save preference
         localStorage.setItem('picker_wheel_effects', this.effectsEnabled);
-        console.log('✨ Effects', this.effectsEnabled ? 'enabled' : 'disabled');
+        dlog('✨ Effects', this.effectsEnabled ? 'enabled' : 'disabled');
     }
 
     loadSettings() {
@@ -518,12 +532,12 @@ class PickerWheelUI {
             }
         }
 
-        console.log('⚙️ Settings loaded - Sound:', this.soundEnabled, 'Effects:', this.effectsEnabled);
+        dlog('⚙️ Settings loaded - Sound:', this.soundEnabled, 'Effects:', this.effectsEnabled);
     }
 
     async loadAvailablePrizes() {
         try {
-            console.log('📦 Loading unique prizes for wheel display...');
+            dlog('📦 Loading unique prizes for wheel display...');
             
             // Add cache buster to force fresh data
             const cacheBuster = new Date().getTime();
@@ -548,11 +562,11 @@ class PickerWheelUI {
                 category: prize.category_name || prize.category  // Normalize category name
             }));
             
-            console.log(`✅ Loaded ${this.availablePrizes.length} unique prizes (deduplicated by backend)`);
+            dlog(`✅ Loaded ${this.availablePrizes.length} unique prizes (deduplicated by backend)`);
             if (data.original_count) {
-                console.log(`   (Original: ${data.original_count} items → Unique: ${this.availablePrizes.length})`);
+                dlog(`   (Original: ${data.original_count} items → Unique: ${this.availablePrizes.length})`);
             }
-            console.log('Wheel prizes:', this.availablePrizes.map((p, i) => `${i + 1}. ${p.name} (${p.category})`));
+            dlog('Wheel prizes:', this.availablePrizes.map((p, i) => `${i + 1}. ${p.name} (${p.category})`));
             
         } catch (error) {
             console.error('❌ Failed to load prizes:', error);
@@ -569,7 +583,7 @@ class PickerWheelUI {
                 this.updateStatsDisplay(data.stats);
             }
         } catch (error) {
-            console.warn('⚠️ Failed to load stats:', error);
+            dwarn('⚠️ Failed to load stats:', error);
         }
     }
 
@@ -599,7 +613,7 @@ class PickerWheelUI {
             return;
         }
 
-        console.log('🎡 Creating wheel with', this.availablePrizes.length, 'prizes');
+        dlog('🎡 Creating wheel with', this.availablePrizes.length, 'prizes');
 
         // Clear existing segments
         this.wheelInner.innerHTML = '';
@@ -622,9 +636,9 @@ class PickerWheelUI {
         });
 
         // Debug: Log segment mapping
-        console.log('🎡 Segment mapping:');
+        dlog('🎡 Segment mapping:');
         this.segments.forEach((segment, index) => {
-            console.log(`  ${index}: ${segment.name} (ID: ${segment.id}) - ${segment.startAngle.toFixed(1)}° to ${segment.endAngle.toFixed(1)}°`);
+            dlog(`  ${index}: ${segment.name} (ID: ${segment.id}) - ${segment.startAngle.toFixed(1)}° to ${segment.endAngle.toFixed(1)}°`);
         });
         
         // Debug: Log available prizes by budget tier
@@ -633,12 +647,12 @@ class PickerWheelUI {
             acc[tier] = (acc[tier] || 0) + 1;
             return acc;
         }, {});
-        console.log('📊 Available prizes by budget tier:', breakdown);
+        dlog('📊 Available prizes by budget tier:', breakdown);
 
         // Create SVG wheel for precise segments
         this.createSVGWheel();
 
-        console.log('✅ Wheel created with', this.segments.length, 'equal segments');
+        dlog('✅ Wheel created with', this.segments.length, 'equal segments');
     }
 
     createSVGWheel() {
@@ -842,21 +856,21 @@ class PickerWheelUI {
      */
     updatePrizes(newPrizes, animate = true) {
         if (!newPrizes || newPrizes.length === 0) {
-            console.warn('No prizes to update');
+            dwarn('No prizes to update');
             return false;
         }
 
         // If spinning, queue update
         if (this.isSpinning) {
             this._pendingPrizeUpdate = newPrizes;
-            console.log('⏳ Update queued - wheel is spinning');
+            dlog('⏳ Update queued - wheel is spinning');
             return false;
         }
 
         const oldPrizes = [...this.availablePrizes];
         const changes = this.detectPrizeChanges(oldPrizes, newPrizes);
 
-        console.log('🔄 Prize changes detected:', {
+        dlog('🔄 Prize changes detected:', {
             added: changes.added.length,
             removed: changes.removed.length,
             modified: changes.modified.length
@@ -1081,7 +1095,7 @@ class PickerWheelUI {
 
     async spin() {
         if (this.isSpinning) {
-            console.log('⚠️ Already spinning');
+            dlog('⚠️ Already spinning');
             return;
         }
 
@@ -1090,7 +1104,7 @@ class PickerWheelUI {
             return;
         }
 
-        console.log('🎯 Starting spin...');
+        dlog('🎯 Starting spin...');
         this.isSpinning = true;
         this.spinButton.disabled = true;
         this.spinButton.textContent = 'SPINNING...';
@@ -1102,33 +1116,33 @@ class PickerWheelUI {
         document.body.classList.add('spinning');
 
         try {
-            console.log('🔍 === SIMPLIFIED SPIN FLOW ===');
+            dlog('🔍 === SIMPLIFIED SPIN FLOW ===');
             
             // === STEP 1: BACKEND DETERMINES AVAILABLE PRIZE ===
-            console.log('📡 Step 1: Backend determining available prize...');
+            dlog('📡 Step 1: Backend determining available prize...');
             const availablePrize = await this.getBackendSelectedPrize();
             
             // === STEP 2: FRONTEND CALCULATES WHEEL ROTATION ===
-            console.log('🔄 Step 2: Calculating wheel rotation...');
+            dlog('🔄 Step 2: Calculating wheel rotation...');
             const rotationData = await this.calculateWheelRotation(availablePrize);
             
             // === STEP 3: ANIMATE WHEEL TO TARGET POSITION ===
-            console.log('🎡 Step 3: Animating wheel to target position...');
+            dlog('🎡 Step 3: Animating wheel to target position...');
             await this.animateWheelToPosition(rotationData.totalRotation);
             
             // === STEP 4: VERIFY ALIGNMENT ===
-            console.log('✅ Step 4: Verifying wheel alignment...');
+            dlog('✅ Step 4: Verifying wheel alignment...');
             const alignment = this.verifyWheelAlignment(availablePrize, rotationData.targetSegment);
             
             // === STEP 5: BACKEND CONFIRMS AND AWARDS PRIZE ===
-            console.log('🏆 Step 5: Confirming prize award with backend...');
+            dlog('🏆 Step 5: Confirming prize award with backend...');
             const awardedPrize = await this.confirmPrizeWithBackend(availablePrize, rotationData);
             
             // === STEP 6: DISPLAY RESULT ===
-            console.log('🎉 Step 6: Displaying result...');
+            dlog('🎉 Step 6: Displaying result...');
             this.showCelebration(awardedPrize);
             
-            console.log('✅ Spin completed successfully!');
+            dlog('✅ Spin completed successfully!');
             
         } catch (error) {
             console.error('❌ Spin failed:', error);
@@ -1181,30 +1195,30 @@ class PickerWheelUI {
         // Calculate the final absolute rotation
         const finalAbsoluteRotation = this.currentRotation + totalRotationIncrement;
         
-        console.log(`🎯 ROTATION CALCULATION (CORRECTED):`);
-        console.log(`   Target segment: ${targetSegmentIndex}`);
-        console.log(`   Segment center angle: ${targetSegmentCenter}°`);
-        console.log(`   Target final position: ${targetFinalPosition}° (CORRECTED: segment center at pointer)`);
-        console.log(`   Current position: ${currentPosition}° (absolute: ${this.currentRotation}°)`);
-        console.log(`   Rotation needed: ${rotationNeeded}°`);
-        console.log(`   Extra spins: ${extraSpins.toFixed(1)} (${(extraSpins * 360)}°)`);
-        console.log(`   Total rotation increment: ${totalRotationIncrement}°`);
-        console.log(`   Final absolute rotation: ${finalAbsoluteRotation}°`);
+        dlog(`🎯 ROTATION CALCULATION (CORRECTED):`);
+        dlog(`   Target segment: ${targetSegmentIndex}`);
+        dlog(`   Segment center angle: ${targetSegmentCenter}°`);
+        dlog(`   Target final position: ${targetFinalPosition}° (CORRECTED: segment center at pointer)`);
+        dlog(`   Current position: ${currentPosition}° (absolute: ${this.currentRotation}°)`);
+        dlog(`   Rotation needed: ${rotationNeeded}°`);
+        dlog(`   Extra spins: ${extraSpins.toFixed(1)} (${(extraSpins * 360)}°)`);
+        dlog(`   Total rotation increment: ${totalRotationIncrement}°`);
+        dlog(`   Final absolute rotation: ${finalAbsoluteRotation}°`);
         
         // Verify our math
         const predictedFinalPosition = finalAbsoluteRotation % 360;
-        console.log(`🔍 Predicted final position: ${predictedFinalPosition}° (should be ~${targetFinalPosition}°)`);
+        dlog(`🔍 Predicted final position: ${predictedFinalPosition}° (should be ~${targetFinalPosition}°)`);
         
         // Double-check: which segment will be at pointer?
         const predictedSegment = Math.floor(predictedFinalPosition / segmentAngle) % this.segments.length;
-        console.log(`🔍 Predicted segment at pointer: ${predictedSegment} (should be ${targetSegmentIndex})`);
+        dlog(`🔍 Predicted segment at pointer: ${predictedSegment} (should be ${targetSegmentIndex})`);
         
         return finalAbsoluteRotation;
     }
 
     async animateWheelToPosition(targetRotation) {
         return new Promise((resolve) => {
-            console.log(`🎡 Starting wheel animation to ${targetRotation}°`);
+            dlog(`🎡 Starting wheel animation to ${targetRotation}°`);
             
             // Start ticking sound
             this.startTickingSound();
@@ -1223,12 +1237,12 @@ class PickerWheelUI {
             // Update current rotation for next spin
             this.currentRotation = targetRotation;
             
-            console.log(`🎡 Wheel rotating to ${targetRotation}° (final position: ${this.currentRotation}°)`);
+            dlog(`🎡 Wheel rotating to ${targetRotation}° (final position: ${this.currentRotation}°)`);
             
             // Stop ticking sound after animation
             setTimeout(() => {
                 this.stopTickingSound();
-                console.log('🎡 Wheel animation completed');
+                dlog('🎡 Wheel animation completed');
                 resolve();
             }, 6000);
         });
@@ -1236,7 +1250,7 @@ class PickerWheelUI {
 
     // === PHASE 2: CALCULATE EXACT ROTATION ANGLE ===
     calculatePreciseRotation(serverDecision) {
-        console.log(`🎯 Calculating precise rotation for sector ${serverDecision.sector_index}...`);
+        dlog(`🎯 Calculating precise rotation for sector ${serverDecision.sector_index}...`);
         
         const targetSectorIndex = serverDecision.sector_index;
         const sectorCenter = serverDecision.sector_center;
@@ -1247,7 +1261,7 @@ class PickerWheelUI {
             throw new Error(`Mapping error: Server prize ${serverDecision.prize.id} doesn't match wheel segment ${targetSectorIndex}`);
         }
         
-        console.log(`✅ Verified mapping: Sector ${targetSectorIndex} = ${wheelPrize.name}`);
+        dlog(`✅ Verified mapping: Sector ${targetSectorIndex} = ${wheelPrize.name}`);
         
         // CORRECT LOGIC: Let's think step by step
         // 
@@ -1269,10 +1283,10 @@ class PickerWheelUI {
         
         const rotationNeededFromZero = (360 - sectorCenter) % 360;
         
-        console.log(`🔧 CORRECT LOGIC DEBUG:`);
-        console.log(`   Sector center: ${sectorCenter}°`);
-        console.log(`   To bring to pointer: rotate wheel by ${rotationNeededFromZero}°`);
-        console.log(`   Verification: (${sectorCenter}° + ${rotationNeededFromZero}°) % 360 = ${(sectorCenter + rotationNeededFromZero) % 360}° (should be 0°)`);
+        dlog(`🔧 CORRECT LOGIC DEBUG:`);
+        dlog(`   Sector center: ${sectorCenter}°`);
+        dlog(`   To bring to pointer: rotate wheel by ${rotationNeededFromZero}°`);
+        dlog(`   Verification: (${sectorCenter}° + ${rotationNeededFromZero}°) % 360 = ${(sectorCenter + rotationNeededFromZero) % 360}° (should be 0°)`);
         
         
         // Add exciting multiple rotations (8-12 spins) - MUST be integer to avoid floating point errors
@@ -1306,18 +1320,18 @@ class PickerWheelUI {
         const expectedFinalPosition = finalRotation % 360;
         const shouldBe = rotationNeededFromZero;
         
-        console.log(`🔧 MATH VERIFICATION:`);
-        console.log(`   Final rotation: ${finalRotation}°`);
-        console.log(`   Expected final position: ${expectedFinalPosition}°`);
-        console.log(`   Should be: ${shouldBe}°`);
-        console.log(`   Math correct: ${Math.abs(expectedFinalPosition - shouldBe) < 0.01 ? '✅' : '❌'}`);
+        dlog(`🔧 MATH VERIFICATION:`);
+        dlog(`   Final rotation: ${finalRotation}°`);
+        dlog(`   Expected final position: ${expectedFinalPosition}°`);
+        dlog(`   Should be: ${shouldBe}°`);
+        dlog(`   Math correct: ${Math.abs(expectedFinalPosition - shouldBe) < 0.01 ? '✅' : '❌'}`);
         
-        console.log(`🔧 FINAL CALCULATION:`);
-        console.log(`   Current wheel position: ${this.currentRotation}° (normalized: ${currentNormalized}°)`);
-        console.log(`   Target wheel position: ${rotationNeededFromZero}°`);
-        console.log(`   Rotation increment needed: ${rotationIncrement}°`);
-        console.log(`   With ${totalSpins.toFixed(1)} extra spins: ${finalRotation}°`);
-        console.log(`   Final position will be: ${finalRotation % 360}° (should be ${rotationNeededFromZero}°)`);
+        dlog(`🔧 FINAL CALCULATION:`);
+        dlog(`   Current wheel position: ${this.currentRotation}° (normalized: ${currentNormalized}°)`);
+        dlog(`   Target wheel position: ${rotationNeededFromZero}°`);
+        dlog(`   Rotation increment needed: ${rotationIncrement}°`);
+        dlog(`   With ${totalSpins.toFixed(1)} extra spins: ${finalRotation}°`);
+        dlog(`   Final position will be: ${finalRotation % 360}° (should be ${rotationNeededFromZero}°)`);
         
         
         return {
@@ -1331,7 +1345,7 @@ class PickerWheelUI {
 
     // === PHASE 3: EXECUTE SPIN ANIMATION ===
     async executeSpinAnimation(rotationData) {
-        console.log(`🎡 Executing spin animation to ${rotationData.finalRotation}°...`);
+        dlog(`🎡 Executing spin animation to ${rotationData.finalRotation}°...`);
         
         return new Promise((resolve) => {
             // Start ticking sound
@@ -1353,8 +1367,8 @@ class PickerWheelUI {
             const targetNormalizedPosition = rotationData.finalRotation % 360;
             this.currentRotation = targetNormalizedPosition; // Initial estimate
             
-            console.log(`🎡 Wheel spinning to exact position: ${rotationData.finalRotation}°`);
-            console.log(`🎯 Expected final position: ${this.currentRotation}°`);
+            dlog(`🎡 Wheel spinning to exact position: ${rotationData.finalRotation}°`);
+            dlog(`🎯 Expected final position: ${this.currentRotation}°`);
             
             // Wait for animation completion
             setTimeout(() => {
@@ -1364,15 +1378,15 @@ class PickerWheelUI {
                 const actualCSSRotation = this.getActualCSSRotation();
                 if (actualCSSRotation !== null) {
                     const difference = Math.abs(actualCSSRotation - this.currentRotation);
-                    console.log(`🔄 CSS SYNC: Expected ${this.currentRotation}°, Actual ${actualCSSRotation}°, Diff: ${difference}°`);
+                    dlog(`🔄 CSS SYNC: Expected ${this.currentRotation}°, Actual ${actualCSSRotation}°, Diff: ${difference}°`);
                     
                     if (difference > 1) { // If difference is significant
-                        console.log(`⚠️ CORRECTING: Updating tracked rotation to match CSS`);
+                        dlog(`⚠️ CORRECTING: Updating tracked rotation to match CSS`);
                         this.currentRotation = actualCSSRotation;
                     }
                 }
                 
-                console.log('🎡 Spin animation completed');
+                dlog('🎡 Spin animation completed');
                 resolve();
             }, 6000);
         });
@@ -1380,7 +1394,7 @@ class PickerWheelUI {
 
     // === PHASE 4: VERIFY PRECISE LANDING ===
     verifyPreciseLanding(serverDecision, rotationData) {
-        console.log('✅ Verifying precise landing...');
+        dlog('✅ Verifying precise landing...');
         
         const finalRotation = this.currentRotation;
         const segmentAngle = 360 / this.segments.length;
@@ -1412,17 +1426,17 @@ class PickerWheelUI {
         const actualSector = Math.floor(originalPointerPosition / segmentAngle);
         const boundaryAdjusted = actualSector >= this.segments.length ? 0 : actualSector;
         
-        console.log(`🔧 SECTOR DETECTION FIX:`);
-        console.log(`   Wheel position: ${wheelPosition}°`);
-        console.log(`   Original pointer position: ${originalPointerPosition}°`);
-        console.log(`   Segment angle: ${segmentAngle}°`);
-        console.log(`   Calculated sector: ${actualSector}`);
-        console.log(`   Boundary adjusted: ${boundaryAdjusted}`);
-        console.log(`   Browser: ${navigator.userAgent.includes('Chrome') ? 'Chrome' : navigator.userAgent.includes('Safari') ? 'Safari' : 'Other'}`);
+        dlog(`🔧 SECTOR DETECTION FIX:`);
+        dlog(`   Wheel position: ${wheelPosition}°`);
+        dlog(`   Original pointer position: ${originalPointerPosition}°`);
+        dlog(`   Segment angle: ${segmentAngle}°`);
+        dlog(`   Calculated sector: ${actualSector}`);
+        dlog(`   Boundary adjusted: ${boundaryAdjusted}`);
+        dlog(`   Browser: ${navigator.userAgent.includes('Chrome') ? 'Chrome' : navigator.userAgent.includes('Safari') ? 'Safari' : 'Other'}`);
         
         // Let's also check what the CSS transform actually shows
         const computedTransform = window.getComputedStyle(this.wheelInner).transform;
-        console.log(`   CSS transform: ${computedTransform}`);
+        dlog(`   CSS transform: ${computedTransform}`);
         
         // Try to extract the actual rotation from the transform matrix
         if (computedTransform && computedTransform !== 'none') {
@@ -1430,26 +1444,26 @@ class PickerWheelUI {
             if (matrix) {
                 const values = matrix[1].split(',').map(parseFloat);
                 const actualCSSRotation = Math.atan2(values[1], values[0]) * (180 / Math.PI);
-                console.log(`   Actual CSS rotation: ${actualCSSRotation}°`);
-                console.log(`   Expected CSS rotation: ${finalRotation % 360}°`);
-                console.log(`   CSS rotation difference: ${Math.abs(actualCSSRotation - (finalRotation % 360))}°`);
+                dlog(`   Actual CSS rotation: ${actualCSSRotation}°`);
+                dlog(`   Expected CSS rotation: ${finalRotation % 360}°`);
+                dlog(`   CSS rotation difference: ${Math.abs(actualCSSRotation - (finalRotation % 360))}°`);
             }
         }
         
         const landedPrize = this.segments[boundaryAdjusted];
         const expectedSector = serverDecision.sector_index;
         
-        console.log(`🎯 Precision Landing Check:`);
-        console.log(`   Server selected: Sector ${expectedSector} (${serverDecision.prize.name})`);
-        console.log(`   Wheel landed on: Sector ${boundaryAdjusted} (${landedPrize ? landedPrize.name : 'Unknown'})`);
-        console.log(`   Final rotation: ${finalRotation}°`);
-        console.log(`   Calculated rotation: ${rotationData.finalRotation}°`);
+        dlog(`🎯 Precision Landing Check:`);
+        dlog(`   Server selected: Sector ${expectedSector} (${serverDecision.prize.name})`);
+        dlog(`   Wheel landed on: Sector ${boundaryAdjusted} (${landedPrize ? landedPrize.name : 'Unknown'})`);
+        dlog(`   Final rotation: ${finalRotation}°`);
+        dlog(`   Calculated rotation: ${rotationData.finalRotation}°`);
         
         const isPerfect = boundaryAdjusted === expectedSector;
         const prizeMatches = landedPrize && landedPrize.id === serverDecision.prize.id;
         
-        console.log(`   Sector match: ${isPerfect ? '✅ PERFECT' : '❌ MISMATCH'}`);
-        console.log(`   Prize match: ${prizeMatches ? '✅ PERFECT' : '❌ MISMATCH'}`);
+        dlog(`   Sector match: ${isPerfect ? '✅ PERFECT' : '❌ MISMATCH'}`);
+        dlog(`   Prize match: ${prizeMatches ? '✅ PERFECT' : '❌ MISMATCH'}`);
         
         return {
             isPerfect: isPerfect && prizeMatches,
@@ -1470,7 +1484,7 @@ class PickerWheelUI {
 
     // === PHASE 1: CLIENT STARTS RESPONSIVE SPIN ANIMATION ===
     startResponsiveSpinAnimation() {
-        console.log('🎡 Starting responsive wheel animation...');
+        dlog('🎡 Starting responsive wheel animation...');
         
         // Start ticking sound
         this.startTickingSound();
@@ -1489,7 +1503,7 @@ class PickerWheelUI {
         this.wheelInner.style.transition = 'transform 3s linear';
         this.wheelInner.style.transform = `rotate(${continuousRotation}deg)`;
         
-        console.log(`🎡 Wheel spinning continuously: ${this.currentRotation}° → ${continuousRotation}°`);
+        dlog(`🎡 Wheel spinning continuously: ${this.currentRotation}° → ${continuousRotation}°`);
         
         return {
             startTime: Date.now(),
@@ -1500,7 +1514,7 @@ class PickerWheelUI {
 
     // === PHASE 2: SERVER DECIDES PRIZE AND RESERVES IT ===
     async requestServerPrizeDecision(idempotencyKey) {
-        console.log('📡 Requesting server prize decision with reservation...');
+        dlog('📡 Requesting server prize decision with reservation...');
         
         const response = await fetch(`${this.apiBaseUrl}/spin/reserve`, {
             method: 'POST',
@@ -1525,18 +1539,18 @@ class PickerWheelUI {
             throw new Error('Invalid server signature - response may be tampered');
         }
 
-        console.log('✅ Server decision received and verified:');
-        console.log(`   Prize: ${data.prize.name} (ID: ${data.prize.id})`);
-        console.log(`   Sector: ${data.sector_index} (angle: ${data.sector_center}°)`);
-        console.log(`   Reservation: ${data.reservation_id} (TTL: ${data.reservation_ttl}s)`);
-        console.log(`   Signature: ${data.signature.substring(0, 16)}...`);
+        dlog('✅ Server decision received and verified:');
+        dlog(`   Prize: ${data.prize.name} (ID: ${data.prize.id})`);
+        dlog(`   Sector: ${data.sector_index} (angle: ${data.sector_center}°)`);
+        dlog(`   Reservation: ${data.reservation_id} (TTL: ${data.reservation_ttl}s)`);
+        dlog(`   Signature: ${data.signature.substring(0, 16)}...`);
 
         return data;
     }
 
     // === PHASE 3: CLIENT ANIMATES TO SERVER-SELECTED SECTOR ===
     async animateToServerSector(serverDecision, spinAnimation) {
-        console.log(`🎯 Animating to server-selected sector ${serverDecision.sector_index}...`);
+        dlog(`🎯 Animating to server-selected sector ${serverDecision.sector_index}...`);
         
         // Wait for continuous spin to build up
         await new Promise(resolve => setTimeout(resolve, 1500));
@@ -1549,8 +1563,8 @@ class PickerWheelUI {
         const totalSpins = 8 + Math.random() * 4;
         const finalRotation = (totalSpins * 360) + (finalPosition % 360);
         
-        console.log(`📐 Server sector center: ${targetAngle}°`);
-        console.log(`🎡 Final rotation: ${finalRotation}° (${totalSpins.toFixed(1)} spins)`);
+        dlog(`📐 Server sector center: ${targetAngle}°`);
+        dlog(`🎡 Final rotation: ${finalRotation}° (${totalSpins.toFixed(1)} spins)`);
         
         // Smooth deceleration to exact server position
         this.wheelInner.style.transition = 'transform 4s cubic-bezier(0.23, 1, 0.32, 1)';
@@ -1563,7 +1577,7 @@ class PickerWheelUI {
         return new Promise(resolve => {
             setTimeout(() => {
                 this.stopTickingSound();
-                console.log('🎡 Wheel landed on server-selected sector');
+                dlog('🎡 Wheel landed on server-selected sector');
                 resolve();
             }, 4000);
         });
@@ -1571,16 +1585,16 @@ class PickerWheelUI {
 
     // === PHASE 4: DISPLAY SERVER MESSAGE ===
     displayServerAuthorizedResult(serverDecision) {
-        console.log('🎉 Displaying server-authorized result...');
+        dlog('🎉 Displaying server-authorized result...');
         
         // Verify the wheel actually landed on the correct sector
         const actualSector = this.getCurrentSector();
         const expectedSector = serverDecision.sector_index;
         
-        console.log(`🎯 Landing verification:`);
-        console.log(`   Expected sector: ${expectedSector}`);
-        console.log(`   Actual sector: ${actualSector}`);
-        console.log(`   Match: ${actualSector === expectedSector ? '✅ PERFECT' : '❌ MISMATCH'}`);
+        dlog(`🎯 Landing verification:`);
+        dlog(`   Expected sector: ${expectedSector}`);
+        dlog(`   Actual sector: ${actualSector}`);
+        dlog(`   Match: ${actualSector === expectedSector ? '✅ PERFECT' : '❌ MISMATCH'}`);
         
         // === DEBUG: LOG EXACTLY WHAT WILL BE DISPLAYED ===
         const prizeToDisplay = {
@@ -1590,13 +1604,13 @@ class PickerWheelUI {
             isServerAuthorized: true
         };
         
-        console.log('🔍 DEBUG: Prize being sent to popup');
-        console.log(`   Prize ID: ${prizeToDisplay.id}`);
-        console.log(`   Prize name: ${prizeToDisplay.name}`);
-        console.log(`   Prize emoji: ${prizeToDisplay.emoji}`);
-        console.log(`   Prize budget tier: ${prizeToDisplay.budget_tier}`);
-        console.log(`   Server message: ${prizeToDisplay.serverMessage}`);
-        console.log(`   Is server authorized: ${prizeToDisplay.isServerAuthorized}`);
+        dlog('🔍 DEBUG: Prize being sent to popup');
+        dlog(`   Prize ID: ${prizeToDisplay.id}`);
+        dlog(`   Prize name: ${prizeToDisplay.name}`);
+        dlog(`   Prize emoji: ${prizeToDisplay.emoji}`);
+        dlog(`   Prize budget tier: ${prizeToDisplay.budget_tier}`);
+        dlog(`   Server message: ${prizeToDisplay.serverMessage}`);
+        dlog(`   Is server authorized: ${prizeToDisplay.isServerAuthorized}`);
         
         // Display the server-authorized prize (regardless of visual landing)
         this.showCelebration(prizeToDisplay);
@@ -1604,7 +1618,7 @@ class PickerWheelUI {
 
     // === PHASE 5: CLIENT CONFIRMS RECEIPT, SERVER FINALIZES ===
     async confirmReceiptAndFinalize(serverDecision, idempotencyKey) {
-        console.log('✅ Confirming receipt and requesting finalization...');
+        dlog('✅ Confirming receipt and requesting finalization...');
         
         const response = await fetch(`${this.apiBaseUrl}/spin/finalize`, {
             method: 'POST',
@@ -1629,10 +1643,10 @@ class PickerWheelUI {
             throw new Error(data.error || 'Prize finalization failed');
         }
 
-        console.log('🏆 Prize finalized by server:');
-        console.log(`   Award ID: ${data.award_id}`);
-        console.log(`   Status: ${data.status}`);
-        console.log(`   Inventory updated: ${data.inventory_updated}`);
+        dlog('🏆 Prize finalized by server:');
+        dlog(`   Award ID: ${data.award_id}`);
+        dlog(`   Status: ${data.status}`);
+        dlog(`   Inventory updated: ${data.inventory_updated}`);
         
         return data;
     }
@@ -1643,7 +1657,7 @@ class PickerWheelUI {
         // For now, just check that signature exists and has reasonable format
         const signature = serverResponse.signature;
         if (!signature || signature.length < 32) {
-            console.warn('⚠️ Server signature missing or too short');
+            dwarn('⚠️ Server signature missing or too short');
             return false;
         }
         
@@ -1651,7 +1665,7 @@ class PickerWheelUI {
         // const expectedSignature = hmac_sha256(serverResponse.payload, SECRET_KEY);
         // return signature === expectedSignature;
         
-        console.log('✅ Server signature verified (mock implementation)');
+        dlog('✅ Server signature verified (mock implementation)');
         return true;
     }
 
@@ -1686,14 +1700,14 @@ class PickerWheelUI {
             }
             return null;
         } catch (error) {
-            console.warn('Could not read CSS rotation:', error);
+            dwarn('Could not read CSS rotation:', error);
             return null;
         }
     }
 
     // === STEP 1: START WHEEL SPINNING IMMEDIATELY ===
     startWheelSpinning() {
-        console.log('🎡 Starting immediate wheel rotation...');
+        dlog('🎡 Starting immediate wheel rotation...');
         
         // Start ticking sound
         this.startTickingSound();
@@ -1712,7 +1726,7 @@ class PickerWheelUI {
         this.wheelInner.style.transition = 'transform 2s linear';
         this.wheelInner.style.transform = `rotate(${initialRotation}deg)`;
         
-        console.log(`🎡 Wheel spinning continuously from ${this.currentRotation}° to ${initialRotation}°`);
+        dlog(`🎡 Wheel spinning continuously from ${this.currentRotation}° to ${initialRotation}°`);
         
         return {
             startTime: Date.now(),
@@ -1722,7 +1736,7 @@ class PickerWheelUI {
 
     // === STEP 3: FIND WHERE WINNING PRIZE IS LOCATED ON WHEEL ===
     findPrizeLocationOnWheel(winningPrize) {
-        console.log(`🎯 Finding location of ${winningPrize.name} (ID: ${winningPrize.id}) on wheel...`);
+        dlog(`🎯 Finding location of ${winningPrize.name} (ID: ${winningPrize.id}) on wheel...`);
         
         // Find which segment contains this prize
         const targetSegmentIndex = this.segments.findIndex(segment => segment.id === winningPrize.id);
@@ -1734,7 +1748,7 @@ class PickerWheelUI {
         const segmentAngle = 360 / this.segments.length;
         const segmentCenterAngle = targetSegmentIndex * segmentAngle + (segmentAngle / 2);
         
-        console.log(`✅ Found prize at segment ${targetSegmentIndex}, center angle: ${segmentCenterAngle}°`);
+        dlog(`✅ Found prize at segment ${targetSegmentIndex}, center angle: ${segmentCenterAngle}°`);
         
         return {
             segmentIndex: targetSegmentIndex,
@@ -1745,7 +1759,7 @@ class PickerWheelUI {
 
     // === STEP 4: ADJUST WHEEL TO LAND ON WINNING ITEM ===
     async adjustWheelToLandOnPrize(targetLocation, spinPromise) {
-        console.log(`🔄 Adjusting wheel to land on ${targetLocation.prize.name}...`);
+        dlog(`🔄 Adjusting wheel to land on ${targetLocation.prize.name}...`);
         
         // Wait a moment for the initial spin to get going
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -1758,9 +1772,9 @@ class PickerWheelUI {
         const totalSpins = 8 + Math.random() * 4;
         const finalRotation = (totalSpins * 360) + normalizedTarget;
         
-        console.log(`🎯 Target segment: ${targetLocation.segmentIndex}`);
-        console.log(`📐 Segment center: ${targetLocation.centerAngle}°`);
-        console.log(`🎡 Final rotation: ${finalRotation}° (${totalSpins.toFixed(1)} total spins)`);
+        dlog(`🎯 Target segment: ${targetLocation.segmentIndex}`);
+        dlog(`📐 Segment center: ${targetLocation.centerAngle}°`);
+        dlog(`🎡 Final rotation: ${finalRotation}° (${totalSpins.toFixed(1)} total spins)`);
         
         // Smoothly transition to the exact landing position
         this.wheelInner.style.transition = 'transform 4s cubic-bezier(0.23, 1, 0.32, 1)';
@@ -1773,7 +1787,7 @@ class PickerWheelUI {
         return new Promise(resolve => {
             setTimeout(() => {
                 this.stopTickingSound();
-                console.log('🎡 Wheel finished spinning');
+                dlog('🎡 Wheel finished spinning');
                 resolve();
             }, 4000);
         });
@@ -1781,7 +1795,7 @@ class PickerWheelUI {
 
     // === STEP 5: VERIFY PERFECT LANDING ===
     verifyFinalLanding(expectedPrize, targetLocation) {
-        console.log('✅ Verifying final landing position...');
+        dlog('✅ Verifying final landing position...');
         
         const finalRotation = this.currentRotation;
         const segmentAngle = 360 / this.segments.length;
@@ -1794,13 +1808,13 @@ class PickerWheelUI {
         
         const landedPrize = this.segments[boundaryAdjusted];
         
-        console.log(`🎯 Landing Verification:`);
-        console.log(`   Expected: Segment ${targetLocation.segmentIndex} (${expectedPrize.name})`);
-        console.log(`   Actual: Segment ${boundaryAdjusted} (${landedPrize ? landedPrize.name : 'Unknown'})`);
-        console.log(`   Final rotation: ${finalRotation}°`);
+        dlog(`🎯 Landing Verification:`);
+        dlog(`   Expected: Segment ${targetLocation.segmentIndex} (${expectedPrize.name})`);
+        dlog(`   Actual: Segment ${boundaryAdjusted} (${landedPrize ? landedPrize.name : 'Unknown'})`);
+        dlog(`   Final rotation: ${finalRotation}°`);
         
         const isPerfect = boundaryAdjusted === targetLocation.segmentIndex;
-        console.log(`   Result: ${isPerfect ? '✅ PERFECT LANDING' : '❌ MISSED TARGET'}`);
+        dlog(`   Result: ${isPerfect ? '✅ PERFECT LANDING' : '❌ MISSED TARGET'}`);
         
         return {
             isPerfect: isPerfect,
@@ -1812,9 +1826,9 @@ class PickerWheelUI {
 
     // === STEP 1: BACKEND DETERMINES AVAILABLE PRIZE ===
     async getBackendSelectedPrize() {
-        console.log('📡 Requesting available prize from backend...');
+        dlog('📡 Requesting available prize from backend...');
         
-        const response = await fetch(`${this.apiBaseUrl}/pre-spin`, {
+        const response = await fetchWithTimeout(`${this.apiBaseUrl}/pre-spin`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -1832,7 +1846,7 @@ class PickerWheelUI {
         const prize = data.selected_prize;
         const targetSegment = data.target_segment_index;
         
-        console.log(`✅ Backend selected: ${prize.name} (ID: ${prize.id}) → Segment ${targetSegment}`);
+        dlog(`✅ Backend selected: ${prize.name} (ID: ${prize.id}) → Segment ${targetSegment}`);
         
         return {
             prize: prize,
@@ -1843,21 +1857,21 @@ class PickerWheelUI {
 
     // === STEP 2: FRONTEND CALCULATES WHEEL ROTATION ===
     async calculateWheelRotation(availablePrize) {
-        console.log('🔄 Calculating precise wheel rotation...');
+        dlog('🔄 Calculating precise wheel rotation...');
         
         const targetSegment = availablePrize.targetSegment;
         const prize = availablePrize.prize;
         
         // Verify mapping between backend selection and wheel display
         const wheelPrizeAtSegment = this.segments[targetSegment];
-        console.log(`🔍 Verifying: Wheel segment ${targetSegment} ID=${wheelPrizeAtSegment?.id}, Backend prize ID=${prize.id}`);
+        dlog(`🔍 Verifying: Wheel segment ${targetSegment} ID=${wheelPrizeAtSegment?.id}, Backend prize ID=${prize.id}`);
         
         if (!wheelPrizeAtSegment || wheelPrizeAtSegment.id !== prize.id) {
             console.error(`❌ Mapping mismatch! Wheel segments:`, this.segments.map(s => ({idx: s.index, id: s.id, name: s.name})));
             throw new Error(`Mapping error: Backend prize ${prize.id} doesn't match wheel segment ${targetSegment} (segment has ID: ${wheelPrizeAtSegment?.id})`);
         }
         
-        console.log(`✅ Mapping verified: Segment ${targetSegment} = ${wheelPrizeAtSegment.name}`);
+        dlog(`✅ Mapping verified: Segment ${targetSegment} = ${wheelPrizeAtSegment.name}`);
         
         // Calculate exact rotation needed
         const totalRotation = this.calculateExactRotation(targetSegment);
@@ -1871,7 +1885,7 @@ class PickerWheelUI {
 
     // === STEP 4: VERIFY ALIGNMENT ===
     verifyWheelAlignment(availablePrize, targetSegment) {
-        console.log('✅ Verifying wheel landed correctly...');
+        dlog('✅ Verifying wheel landed correctly...');
         
         const finalRotation = this.currentRotation;
         const segmentAngle = 360 / this.segments.length;
@@ -1888,16 +1902,16 @@ class PickerWheelUI {
         
         const landedPrize = this.segments[boundaryAdjustedSegment];
         
-        console.log(`🎯 Alignment Check:`);
-        console.log(`   Expected: Segment ${targetSegment} (${availablePrize.prize.name})`);
-        console.log(`   Actual: Segment ${boundaryAdjustedSegment} (${landedPrize ? landedPrize.name : 'Unknown'})`);
-        console.log(`   Final rotation: ${finalRotation}°`);
-        console.log(`   Wheel position: ${wheelPosition}°`);
-        console.log(`   Segment angle: ${segmentAngle}°`);
-        console.log(`   Segment at pointer: ${segmentAtPointer}°`);
+        dlog(`🎯 Alignment Check:`);
+        dlog(`   Expected: Segment ${targetSegment} (${availablePrize.prize.name})`);
+        dlog(`   Actual: Segment ${boundaryAdjustedSegment} (${landedPrize ? landedPrize.name : 'Unknown'})`);
+        dlog(`   Final rotation: ${finalRotation}°`);
+        dlog(`   Wheel position: ${wheelPosition}°`);
+        dlog(`   Segment angle: ${segmentAngle}°`);
+        dlog(`   Segment at pointer: ${segmentAtPointer}°`);
         
         const isAligned = boundaryAdjustedSegment === targetSegment;
-        console.log(`   Alignment: ${isAligned ? '✅ PERFECT' : '❌ MISALIGNED'}`);
+        dlog(`   Alignment: ${isAligned ? '✅ PERFECT' : '❌ MISALIGNED'}`);
         
         return {
             isAligned: isAligned,
@@ -1909,9 +1923,9 @@ class PickerWheelUI {
 
     // === STEP 5: BACKEND CONFIRMS AND AWARDS PRIZE ===
     async confirmPrizeWithBackend(availablePrize, rotationData) {
-        console.log('🏆 Confirming prize award with backend...');
+        dlog('🏆 Confirming prize award with backend...');
         
-        const response = await fetch(`${this.apiBaseUrl}/spin`, {
+        const response = await fetchWithTimeout(`${this.apiBaseUrl}/spin`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -1930,42 +1944,42 @@ class PickerWheelUI {
         }
 
         const awardedPrize = data.prize;
-        console.log(`✅ Prize confirmed and awarded: ${awardedPrize.name}`);
+        dlog(`✅ Prize confirmed and awarded: ${awardedPrize.name}`);
         
         // Add prize to daily log
         this.addPrizeToLog(awardedPrize);
         
         // Verify backend didn't change the prize
         if (awardedPrize.id !== availablePrize.prize.id) {
-            console.warn('⚠️ Backend changed the prize!');
-            console.warn(`   Originally selected: ${availablePrize.prize.name}`);
-            console.warn(`   Actually awarded: ${awardedPrize.name}`);
+            dwarn('⚠️ Backend changed the prize!');
+            dwarn(`   Originally selected: ${availablePrize.prize.name}`);
+            dwarn(`   Actually awarded: ${awardedPrize.name}`);
         }
         
         return awardedPrize;
     }
 
     showCelebration(prize) {
-        console.log('🎉 Showing prize modal for:', prize.name);
+        dlog('🎉 Showing prize modal for:', prize.name);
         
         // 🎉 ENHANCED CELEBRATION SEQUENCE
         this.startCelebrationSequence(prize);
         
         // === DEBUG: LOG POPUP DISPLAY DETAILS ===
-        console.log('🔍 DEBUG: Popup display details');
-        console.log(`   Received prize object:`, prize);
-        console.log(`   Prize ID: ${prize.id}`);
-        console.log(`   Prize name: ${prize.name}`);
-        console.log(`   Prize emoji: ${prize.emoji}`);
-        console.log(`   Prize budget tier: ${prize.budget_tier}`);
+        dlog('🔍 DEBUG: Popup display details');
+        dlog(`   Received prize object:`, prize);
+        dlog(`   Prize ID: ${prize.id}`);
+        dlog(`   Prize name: ${prize.name}`);
+        dlog(`   Prize emoji: ${prize.emoji}`);
+        dlog(`   Prize budget tier: ${prize.budget_tier}`);
 
         const prizeEmoji = document.getElementById('prizeEmoji');
         const prizeName = document.getElementById('prizeName');
         const prizeDisplay = document.getElementById('prizeDisplay');
 
-        console.log('🔍 DEBUG: Setting DOM elements');
-        console.log(`   Setting emoji to: ${prize.emoji || '🎁'}`);
-        console.log(`   Setting name to: ${prize.name}`);
+        dlog('🔍 DEBUG: Setting DOM elements');
+        dlog(`   Setting emoji to: ${prize.emoji || '🎁'}`);
+        dlog(`   Setting name to: ${prize.name}`);
 
         if (prizeEmoji) {
             // Same flat icon as the wheel slice (combo emojis for legacy combo
@@ -1989,7 +2003,7 @@ class PickerWheelUI {
     
     // 🎉 ENHANCED CELEBRATION SYSTEM
     startCelebrationSequence(prize) {
-        console.log('🎉 Starting celebration sequence for:', prize.name, 'Budget tier:', prize.budget_tier);
+        dlog('🎉 Starting celebration sequence for:', prize.name, 'Budget tier:', prize.budget_tier);
         
         // Stop any ongoing sounds first
         this.stopTickingSound();
@@ -2012,7 +2026,7 @@ class PickerWheelUI {
     
     playCelebrationSound(category) {
         if (!this.soundEnabled) {
-            console.log('🔇 Sound disabled, skipping celebration sound');
+            dlog('🔇 Sound disabled, skipping celebration sound');
             return;
         }
         
@@ -2024,11 +2038,11 @@ class PickerWheelUI {
             if (category === 'rare' || category === 'ultra_rare') {
                 soundToPlay = this.audioElements.rareWinSound;
                 duration = 5000; // 5 seconds for rare prizes - more celebration!
-                console.log('🎵 Playing RARE celebration sound for', category);
+                dlog('🎵 Playing RARE celebration sound for', category);
             } else {
                 soundToPlay = this.audioElements.winSound;
                 duration = 4000; // 4 seconds for common prizes
-                console.log('🎵 Playing COMMON celebration sound for', category);
+                dlog('🎵 Playing COMMON celebration sound for', category);
             }
             
             if (soundToPlay) {
@@ -2041,38 +2055,38 @@ class PickerWheelUI {
                 if (playPromise !== undefined) {
                     playPromise
                         .then(() => {
-                            console.log('🎵 Celebration sound started successfully');
+                            dlog('🎵 Celebration sound started successfully');
                             
                             // Stop sound after specified duration
                             setTimeout(() => {
                                 if (!soundToPlay.paused) {
                                     soundToPlay.pause();
                                     soundToPlay.currentTime = 0;
-                                    console.log('🔇 Celebration sound stopped after', duration + 'ms');
+                                    dlog('🔇 Celebration sound stopped after', duration + 'ms');
                                 }
                             }, duration);
                         })
                         .catch(error => {
-                            console.warn('⚠️ Failed to play celebration sound:', error);
+                            dwarn('⚠️ Failed to play celebration sound:', error);
                             // Fallback: try to enable audio context
                             if (this.audioContext && this.audioContext.state === 'suspended') {
                                 this.audioContext.resume().then(() => {
-                                    console.log('🔊 Audio context resumed, retrying sound...');
-                                    soundToPlay.play().catch(e => console.warn('⚠️ Retry failed:', e));
+                                    dlog('🔊 Audio context resumed, retrying sound...');
+                                    soundToPlay.play().catch(e => dwarn('⚠️ Retry failed:', e));
                                 });
                             }
                         });
                 }
             } else {
-                console.warn('⚠️ No sound element available for prize rarity:', category);
+                dwarn('⚠️ No sound element available for prize rarity:', category);
             }
         } catch (error) {
-            console.warn('⚠️ Error playing celebration sound:', error);
+            dwarn('⚠️ Error playing celebration sound:', error);
         }
     }
     
     showConfetti(category) {
-        console.log('🎊 Starting confetti animation for:', category);
+        dlog('🎊 Starting confetti animation for:', category);
         
         // Create confetti container
         const confettiContainer = document.createElement('div');
@@ -2112,7 +2126,7 @@ class PickerWheelUI {
         setTimeout(() => {
             if (confettiContainer.parentNode) {
                 confettiContainer.parentNode.removeChild(confettiContainer);
-                console.log('🧹 Confetti cleaned up');
+                dlog('🧹 Confetti cleaned up');
             }
         }, confettiDuration);
     }
@@ -2294,7 +2308,7 @@ class PickerWheelUI {
             }
         }, cleanupDelay);
         
-        console.log('✨ Modal celebration effects added for:', category);
+        dlog('✨ Modal celebration effects added for:', category);
     }
 
     closeModal() {
@@ -2350,7 +2364,7 @@ class PickerWheelUI {
     
     // 📋 DAILY PRIZES LOG SYSTEM
     initializeDailyPrizesLog() {
-        console.log('📋 Initializing daily prizes log...');
+        dlog('📋 Initializing daily prizes log...');
         
         // Get DOM elements
         this.refreshLogBtn = document.getElementById('refreshLogBtn');
@@ -2378,12 +2392,12 @@ class PickerWheelUI {
             }
         }, 30000);
         
-        console.log('✅ Daily prizes log initialized');
+        dlog('✅ Daily prizes log initialized');
     }
     
     async refreshDailyPrizesLog() {
         try {
-            console.log('🔄 Refreshing daily prizes log...');
+            dlog('🔄 Refreshing daily prizes log...');
             
             const response = await fetch('/api/daily-prizes-log');
             const data = await response.json();
@@ -2392,9 +2406,9 @@ class PickerWheelUI {
                 this.dailyPrizesLog = data.prizes_won;
                 this.updateDailyPrizesDisplay();
                 this.updateLogStats(data.total_count);
-                console.log(`✅ Loaded ${data.total_count} prize entries`);
+                dlog(`✅ Loaded ${data.total_count} prize entries`);
             } else {
-                console.warn('⚠️ Failed to load daily prizes log:', data.error);
+                dwarn('⚠️ Failed to load daily prizes log:', data.error);
             }
         } catch (error) {
             console.error('❌ Error refreshing daily prizes log:', error);
@@ -2460,7 +2474,7 @@ class PickerWheelUI {
     }
     
     clearLogDisplay() {
-        console.log('🗑️ Clearing log display (UI only)...');
+        dlog('🗑️ Clearing log display (UI only)...');
         
         // Clear the display but keep the actual data
         this.logDisplayHidden = true;
@@ -2518,13 +2532,13 @@ class PickerWheelUI {
             this.updateLogStats(this.dailyPrizesLog.length);
         }
         
-        console.log('📋 Added prize to log:', prize.name);
+        dlog('📋 Added prize to log:', prize.name);
     }
 }
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 DOM loaded, initializing PickerWheel UI...');
+    dlog('🚀 DOM loaded, initializing PickerWheel UI...');
     window.pickerWheelUI = new PickerWheelUI();
 });
 
@@ -2532,15 +2546,15 @@ document.addEventListener('DOMContentLoaded', () => {
 const WHEEL_VERSION = '11.3_20250922';
 const BUILD_DATE = '2025-09-22';
 
-console.log('📱 PickerWheel UI v' + WHEEL_VERSION + ' loaded successfully!');
-console.log('🗓 Build date: ' + BUILD_DATE);
+dlog('📱 PickerWheel UI v' + WHEEL_VERSION + ' loaded successfully!');
+dlog('🗓 Build date: ' + BUILD_DATE);
 
 // Clear browser cache for API requests
 if ('caches' in window) {
     caches.keys().then(cacheNames => {
         cacheNames.forEach(cacheName => {
             if (cacheName.includes('wheel') || cacheName.includes('prize') || cacheName.includes('spin')) {
-                console.log('🧹 Clearing cache:', cacheName);
+                dlog('🧹 Clearing cache:', cacheName);
                 caches.delete(cacheName);
             }
         });

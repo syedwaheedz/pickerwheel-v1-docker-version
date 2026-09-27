@@ -19,16 +19,34 @@ logger = logging.getLogger(__name__)
 admin_bp = Blueprint('admin', __name__)
 
 
+def _cf_access_email():
+    """
+    The email Cloudflare Access already verified via its own login (OTP/
+    SSO) before forwarding the request here, when the request came through
+    the public pickerwheel.mytmobiles.com path. Cloudflare sets this header
+    itself once Access approves a request - it isn't something the admin
+    typed in. Note this app is also reachable directly on the LAN/localhost
+    (not behind Access), where nothing strips a client-forged copy of this
+    header; that's an acceptable trade-off here since it only feeds the
+    audit log's actor label, not the admin auth decision itself, and the
+    prompt-based actor name it replaces was already 100% self-reported.
+    """
+    return request.headers.get('Cf-Access-Authenticated-User-Email')
+
+
 def _actor():
     """
     The human-readable name of whoever is making this request, for the
-    audit log. Sent by admin.html as admin_actor once per browser session
-    (see connectLiveUpdates()/the actor-name prompt) - a real per-device/
-    per-person identity is the actual long-term fix (deferred item #18
-    on the multi-device board), but this at least makes 'who did this'
-    answerable without it, since every admin currently shares one
-    password and audit_log used to just say 'admin' for everything.
+    audit log. Prefers the identity Cloudflare Access already verified;
+    falls back to what admin.html sends (X-Admin-Actor / admin_actor, from
+    the actor-name prompt) for LAN/localhost access, which isn't behind
+    Access - a real per-device/per-person identity for that path is the
+    actual long-term fix (deferred item #18 on the multi-device board).
     """
+    cf_email = _cf_access_email()
+    if cf_email:
+        return cf_email
+
     data = request.get_json(silent=True) or {}
     return (
         request.headers.get('X-Admin-Actor')
@@ -71,7 +89,7 @@ def login():
 
     session.permanent = True
     session['admin_authenticated'] = True
-    return jsonify({'success': True})
+    return jsonify({'success': True, 'cf_email': _cf_access_email()})
 
 
 @admin_bp.route('/logout', methods=['POST'])
@@ -89,7 +107,7 @@ def check_session():
     again while the session is still good.
     """
     if session.get('admin_authenticated'):
-        return jsonify({'success': True, 'authenticated': True})
+        return jsonify({'success': True, 'authenticated': True, 'cf_email': _cf_access_email()})
     return jsonify({'success': False, 'authenticated': False}), 401
 
 

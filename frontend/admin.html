@@ -1511,7 +1511,15 @@
         // (sessionStorage), not stored in localStorage, since a shared/
         // public device shouldn't remember a name across full browser
         // restarts.
-        function getOrPromptActorName() {
+        function getOrPromptActorName(cfEmail) {
+            // Cloudflare Access already verified who this is (via its own
+            // OTP/SSO login) before the request ever reached this app - no
+            // need to ask again when that identity is available.
+            if (cfEmail) {
+                adminActor = cfEmail;
+                return adminActor;
+            }
+
             let name = sessionStorage.getItem('admin_actor_name');
             if (!name) {
                 name = (window.prompt('Your name (for the change log):') || '').trim();
@@ -1624,8 +1632,8 @@
         // below are what let a page refresh skip straight back into the
         // panel while that cookie is still valid, instead of always
         // bouncing to the login screen.
-        function showAdminPanel() {
-            getOrPromptActorName();
+        function showAdminPanel(cfEmail) {
+            getOrPromptActorName(cfEmail);
             document.getElementById('loginSection').style.display = 'none';
             document.getElementById('adminContent').classList.add('show');
             document.getElementById('headerActions').style.display = 'block';
@@ -1638,7 +1646,8 @@
             try {
                 const response = await fetch(`${API_BASE}/admin/session`);
                 if (response.ok) {
-                    showAdminPanel();
+                    const data = await response.json();
+                    showAdminPanel(data.cf_email);
                 }
             } catch (error) {
                 // No session / connection error - leave the login screen showing.
@@ -1656,7 +1665,8 @@
                 });
 
                 if (response.ok) {
-                    showAdminPanel();
+                    const data = await response.json();
+                    showAdminPanel(data.cf_email);
                 } else {
                     document.getElementById('loginError').textContent = 'Invalid password';
                 }

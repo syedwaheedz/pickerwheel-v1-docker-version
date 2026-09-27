@@ -28,11 +28,11 @@ class ThemeManager {
                 this.activeTheme = data.theme || null;
                 this.activeEvent = data.event;
                 if (this.activeTheme) {
-                    console.log('🎨 Applying event theme:', data.event?.name);
+                    dlog('🎨 Applying event theme:', data.event?.name);
                 }
                 return data;
             }
-            console.warn('⚠️ Failed to load config');
+            dwarn('⚠️ Failed to load config');
         } catch (error) {
             console.error('❌ Error loading config:', error);
         }

@@ -29,6 +29,24 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: pickerwheel-app
+    # Overrides the image's default `python main.py` (Werkzeug's dev server),
+    # which only handles one connection cleanly at a time - fine for local/
+    # LAN testing, but real browser traffic through the Cloudflare Tunnel
+    # (page assets + polling + a live WebSocket, concurrently) started
+    # dropping/misreading requests as soon as it was reachable from the
+    # public internet. This is the same gunicorn command the Procfile uses
+    # for real hosting (see its comments on why --workers must stay at 1
+    # and why gthread, not eventlet/gevent, matches this app's
+    # async_mode='threading' Socket.IO config).
+    # --threads raised from the Procfile's 4 to 16: each open WebSocket
+    # (customer wheel live-updates, admin panel) permanently occupies one
+    # thread for its whole connection lifetime, which left too few free
+    # threads for ordinary HTTP requests (e.g. /api/spin) under real usage -
+    # those would then queue with no timeout on the client side, hanging
+    # the page indefinitely instead of failing fast. --workers must still
+    # stay at 1 (see the Procfile's own comment on the Socket.IO message
+    # queue constraint).
+    command: gunicorn --worker-class gthread --workers 1 --threads 16 --timeout 120 -b 0.0.0.0:9080 main:app
     ports:
       - "9080:9080"
     volumes:
@@ -53,6 +71,13 @@ services:
       - DB_PASSWORD=pickerwheel123
       - ADMIN_PASSWORD=myTAdmin2025
       - TZ=Asia/Kolkata
+      # Socket.IO/CORS reject any Origin not in this list - the browser
+      # always sends one on a WebSocket handshake, so without the public
+      # domain here every real-browser WS connection through the Cloudflare
+      # Tunnel gets rejected with "not an accepted origin" (surfaced to the
+      # client as a 400/502), even though a manual curl test without an
+      # Origin header would look fine.
+      - ALLOWED_ORIGINS=http://localhost:9080,http://127.0.0.1:9080,http://192.168.1.22:9080,https://pickerwheel.mytmobiles.com
     depends_on:
       postgres:
         condition: service_healthy

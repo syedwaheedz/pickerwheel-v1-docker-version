@@ -49,16 +49,16 @@
             
             if (data.success && data.settings) {
                 realtimeEnabled = data.settings.realtime_updates_enabled !== false;
-                console.log(`🔧 Real-time updates feature flag: ${realtimeEnabled ? 'ENABLED' : 'DISABLED'}`);
+                dlog(`🔧 Real-time updates feature flag: ${realtimeEnabled ? 'ENABLED' : 'DISABLED'}`);
             }
             
             if (realtimeEnabled) {
                 initializeRealtime();
             } else {
-                console.log('⏸️ Real-time updates disabled by feature flag');
+                dlog('⏸️ Real-time updates disabled by feature flag');
             }
         } catch (error) {
-            console.warn('⚠️ Could not check feature flag, defaulting to enabled:', error);
+            dwarn('⚠️ Could not check feature flag, defaulting to enabled:', error);
             initializeRealtime();
         }
     }
@@ -76,21 +76,21 @@
         if (typeof io !== 'undefined') {
             initializeWebSocket(wheel);
         } else {
-            console.warn('⚠️ Socket.IO not loaded. Using polling fallback.');
+            dwarn('⚠️ Socket.IO not loaded. Using polling fallback.');
             startPolling(wheel);
         }
 
         // Add connection status indicator
         addConnectionStatusIndicator();
         
-        console.log('🔌 Real-time support initialized');
+        dlog('🔌 Real-time support initialized');
     }
 
     /**
      * Initialize WebSocket connection
      */
     function initializeWebSocket(wheel) {
-        console.log('🔌 Initializing WebSocket connection...');
+        dlog('🔌 Initializing WebSocket connection...');
 
         const socket = io({
             transports: ['websocket', 'polling'],
@@ -103,7 +103,7 @@
 
         // Connection events
         socket.on('connect', () => {
-            console.log('✅ WebSocket connected');
+            dlog('✅ WebSocket connected');
             updateConnectionStatus('connected');
             socket.emit('join', { room: 'wheel' });
             
@@ -112,7 +112,7 @@
         });
 
         socket.on('disconnect', () => {
-            console.log('❌ WebSocket disconnected');
+            dlog('❌ WebSocket disconnected');
             updateConnectionStatus('disconnected');
             
             // Start polling as fallback
@@ -120,33 +120,33 @@
         });
 
         socket.on('reconnect', (attemptNumber) => {
-            console.log(`🔄 WebSocket reconnected after ${attemptNumber} attempts`);
+            dlog(`🔄 WebSocket reconnected after ${attemptNumber} attempts`);
             updateConnectionStatus('connected');
             stopPolling();
         });
 
         socket.on('connect_error', (error) => {
-            console.warn('⚠️ WebSocket connection error:', error.message);
+            dwarn('⚠️ WebSocket connection error:', error.message);
             updateConnectionStatus('error');
         });
 
         // Listen for prize updates from admin
         socket.on('prizes:updated', async (data) => {
-            console.log('📦 Received prizes:updated event');
+            dlog('📦 Received prizes:updated event');
             if (wheel.updatePrizes(data.prizes)) {
                 updatePrizeCountDisplay(wheel.availablePrizes.length);
             }
         });
 
         socket.on('prize:added', async (data) => {
-            console.log('➕ Prize added:', data.prize?.name);
+            dlog('➕ Prize added:', data.prize?.name);
             showRealtimeNotification(`New prize added: ${data.prize?.name}`, 'success');
             // Fetch fresh data to ensure consistency
             await refreshPrizesFromServer(wheel);
         });
 
         socket.on('prize:removed', async (data) => {
-            console.log('➖ Prize removed:', data.prize_name);
+            dlog('➖ Prize removed:', data.prize_name);
             showRealtimeNotification(`Prize removed: ${data.prize_name}`, 'warning');
             // Fetch fresh data to ensure consistency
             await refreshPrizesFromServer(wheel);
@@ -154,20 +154,20 @@
 
         socket.on('prize:enabled_changed', async (data) => {
             const status = data.is_enabled ? 'enabled' : 'disabled';
-            console.log(`🔄 Prize ${status}:`, data.prize_name);
+            dlog(`🔄 Prize ${status}:`, data.prize_name);
             // Fetch fresh data to update wheel
             await refreshPrizesFromServer(wheel);
         });
 
         socket.on('prize:inventory_updated', (data) => {
-            console.log('📊 Inventory updated for prize:', data.prize_id);
+            dlog('📊 Inventory updated for prize:', data.prize_id);
             // Inventory updates don't require wheel rebuild
         });
 
         // Override spin completion to check for pending updates
         setupSpinCompletionHandler(wheel);
 
-        console.log('🔌 WebSocket handlers registered');
+        dlog('🔌 WebSocket handlers registered');
     }
 
     /**
@@ -176,7 +176,7 @@
     function startPolling(wheel) {
         if (pollingTimer) return; // Already polling
         
-        console.log('🔄 Starting polling fallback...');
+        dlog('🔄 Starting polling fallback...');
         updateConnectionStatus('polling');
         
         pollingTimer = setInterval(async () => {
@@ -191,7 +191,7 @@
         if (pollingTimer) {
             clearInterval(pollingTimer);
             pollingTimer = null;
-            console.log('⏹️ Polling stopped');
+            dlog('⏹️ Polling stopped');
         }
     }
 
@@ -208,7 +208,7 @@
                 
                 // Only update if prizes have changed
                 if (newHash !== lastPrizeHash) {
-                    console.log('🔄 Prize changes detected, updating wheel...');
+                    dlog('🔄 Prize changes detected, updating wheel...');
                     if (wheel.updatePrizes(data.prizes)) {
                         updatePrizeCountDisplay(wheel.availablePrizes.length);
                     }
@@ -250,7 +250,7 @@
                 // Check for pending prize update after spin
                 setTimeout(() => {
                     if (wheel._pendingPrizeUpdate) {
-                        console.log('📦 Applying pending prize update...');
+                        dlog('📦 Applying pending prize update...');
                         const pending = wheel._pendingPrizeUpdate;
                         wheel._pendingPrizeUpdate = null;
                         wheel.updatePrizes(pending);
