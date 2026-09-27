@@ -31,6 +31,15 @@ class Config:
     # Admin settings
     ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'myTAdmin2025')
 
+    # Admin session cookie: SECURE is intentionally not forced on here, since
+    # this stack is also accessed over plain HTTP on the LAN/localhost - a
+    # Secure-only cookie would silently fail to be sent there. It still works
+    # fine over the HTTPS Cloudflare Tunnel (Secure only restricts, never
+    # requires, HTTP). Revisit alongside the rest of PRODUCTION_HARDENING.md.
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_HTTPONLY = True
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=int(os.environ.get('ADMIN_SESSION_HOURS', '12')))
+
     # CORS - comma-separated list of allowed origins. Defaults cover the app's
     # own same-origin dev serving (Flask serves admin.html/index.html itself,
     # so CORS barely matters for the primary UI - this only gates OTHER

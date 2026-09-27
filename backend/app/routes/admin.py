@@ -3,9 +3,10 @@ Admin API Routes
 Endpoints for prize management (add, remove, enable/disable)
 """
 
+import hmac
 import logging
 from datetime import date, datetime
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, session
 from functools import wraps
 from ..models import Prize, PrizeCategory, Inventory, Transaction, SpecialEvent, DailyPrizeTemplate, DateTemplateAssignment, GuaranteedWin
 from ..services import InventoryService, SpinService, RealtimeService
@@ -37,23 +38,59 @@ def _actor():
 
 
 def require_admin_auth(f):
-    """Decorator to require admin authentication"""
+    """
+    Decorator to require admin authentication. Checks the server-side
+    session set by POST /login, rather than a password sent on every
+    request - the password itself is only ever transmitted once, at login.
+    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Check for password in request body or headers
-        data = request.get_json(silent=True) or {}
-        password = data.get('admin_password') or request.headers.get('X-Admin-Password')
-        
-        expected_password = current_app.config.get('ADMIN_PASSWORD', 'myTAdmin2025')
-        
-        if password != expected_password:
+        if not session.get('admin_authenticated'):
             return jsonify({
                 'success': False,
-                'error': 'Invalid admin password'
+                'error': 'Not authenticated'
             }), 401
-        
+
         return f(*args, **kwargs)
     return decorated_function
+
+
+@admin_bp.route('/login', methods=['POST'])
+def login():
+    """Verify the admin password once and start a session cookie."""
+    data = request.get_json(silent=True) or {}
+    password = data.get('admin_password') or request.headers.get('X-Admin-Password') or ''
+
+    expected_password = current_app.config.get('ADMIN_PASSWORD', 'myTAdmin2025')
+
+    if not hmac.compare_digest(password, expected_password):
+        return jsonify({
+            'success': False,
+            'error': 'Invalid admin password'
+        }), 401
+
+    session.permanent = True
+    session['admin_authenticated'] = True
+    return jsonify({'success': True})
+
+
+@admin_bp.route('/logout', methods=['POST'])
+def logout():
+    """Clear the admin session."""
+    session.pop('admin_authenticated', None)
+    return jsonify({'success': True})
+
+
+@admin_bp.route('/session', methods=['GET'])
+def check_session():
+    """
+    Lets the admin page tell, on load/refresh, whether it already has a
+    valid session cookie - so a refresh doesn't force the login screen
+    again while the session is still good.
+    """
+    if session.get('admin_authenticated'):
+        return jsonify({'success': True, 'authenticated': True})
+    return jsonify({'success': False, 'authenticated': False}), 401
 
 
 # =====================================================

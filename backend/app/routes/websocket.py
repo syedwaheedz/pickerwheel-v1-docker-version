@@ -4,7 +4,7 @@ Real-time event handlers for Socket.IO
 """
 
 import logging
-from flask import current_app
+from flask import session
 from flask_socketio import emit, join_room, leave_room
 from ..services.realtime_service import set_socketio, _json_safe
 from ..models import Prize
@@ -12,16 +12,15 @@ from ..models import Prize
 logger = logging.getLogger(__name__)
 
 
-def _is_admin_authenticated(data):
+def _is_admin_authenticated():
     """
-    Same shared-secret check the HTTP admin routes use (require_admin_auth
-    in routes/admin.py), applied to WebSocket admin events. These handlers
-    used to accept mutations from any connected socket with no check at
-    all - this closes that gap without inventing a separate auth scheme.
+    Same session-cookie check the HTTP admin routes use (require_admin_auth
+    in routes/admin.py). Flask-SocketIO copies the Flask session in from the
+    connecting request's cookie at connect time, so this reflects whatever
+    admin.html's earlier POST /api/admin/login already established - no
+    password needs to be re-sent over the socket.
     """
-    password = (data or {}).get('admin_password')
-    expected = current_app.config.get('ADMIN_PASSWORD', 'myTAdmin2025')
-    return password is not None and password == expected
+    return bool(session.get('admin_authenticated'))
 
 
 def register_handlers(socketio):
@@ -59,7 +58,7 @@ def register_handlers(socketio):
     @socketio.on('admin:join')
     def handle_admin_join(data=None):
         """Handle admin panel connection"""
-        if not _is_admin_authenticated(data):
+        if not _is_admin_authenticated():
             emit('admin:error', {'message': 'Invalid admin password'})
             return
         join_room('admin')
@@ -85,7 +84,7 @@ def register_handlers(socketio):
     @socketio.on('admin:add_prize')
     def handle_admin_add_prize(data):
         """Handle admin adding a new prize"""
-        if not _is_admin_authenticated(data):
+        if not _is_admin_authenticated():
             emit('admin:error', {'message': 'Invalid admin password'})
             return
         try:
@@ -118,7 +117,7 @@ def register_handlers(socketio):
     @socketio.on('admin:remove_prize')
     def handle_admin_remove_prize(data):
         """Handle admin removing a prize"""
-        if not _is_admin_authenticated(data):
+        if not _is_admin_authenticated():
             emit('admin:error', {'message': 'Invalid admin password'})
             return
         try:
@@ -147,7 +146,7 @@ def register_handlers(socketio):
     @socketio.on('admin:toggle_prize')
     def handle_admin_toggle_prize(data):
         """Handle admin enabling/disabling a prize"""
-        if not _is_admin_authenticated(data):
+        if not _is_admin_authenticated():
             emit('admin:error', {'message': 'Invalid admin password'})
             return
         try:
